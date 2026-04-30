@@ -25,6 +25,7 @@ from telegram.constants import ParseMode
 
 from src.analyzer.match_context import build_match_context
 from src.analyzer.narrative import build_narrative
+from src.analyzer.pattern_scanner import attach_odds, scan_patterns
 from src.analyzer.predictions import predictions_for_fixtures
 from src.analyzer.tennis_predictions import get_tennis_rater, predict_match as predict_tennis_match
 from src.bot import formatters
@@ -254,6 +255,76 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
             tennis_candidates_count,
         )
 
+    # ------------------------------------------------------------------
+    # PATTERN PICKS — empirical tipster-style scanning. We compute one
+    # MatchContext per fixture (cached implicitly per call) and run the
+    # scanner. Each detected pattern needs live odds from the records we
+    # already fetched; without odds we don't publish.
+    # ------------------------------------------------------------------
+    pattern_picks: List[dict] = []
+    if items and config.odds_api_key:
+        pattern_records: List[dict] = []
+        try:
+            # Reuse the football odds_records fetched above.
+            for it in items:
+                fx = it["fixture"]
+                ctx = build_match_context(fx)
+                detected = scan_patterns(ctx)
+                if not detected:
+                    continue
+                quotes = _quotes_for_match(odds_records, fx)
+                for pat in detected:
+                    enriched = attach_odds(pat, quotes)
+                    if enriched is None:
+                        continue
+                    pattern_records.append(enriched)
+
+            # Dedup: at most one pattern pick per (fixture, market, outcome).
+            best_per_key: dict[tuple[int, str, str], object] = {}
+            for pp in pattern_records:
+                k = (pp.fixture_api_id, pp.market, pp.outcome)
+                prev = best_per_key.get(k)
+                if prev is None or pp.pattern_strength > prev.pattern_strength:
+                    best_per_key[k] = pp
+
+            ordered = sorted(
+                best_per_key.values(),
+                key=lambda p: (p.pattern_strength, p.decimal_odds or 0),
+                reverse=True,
+            )
+
+            # Build display dicts with narrative bullets directly from
+            # the pattern.
+            for pp in ordered[:5]:
+                d = pp.as_display()
+                fx = next(
+                    (
+                        it["fixture"]
+                        for it in items
+                        if it["fixture"].get("api_id") == pp.fixture_api_id
+                    ),
+                    None,
+                )
+                if fx is not None:
+                    league = fx.get("league_name") or "fútbol"
+                    opening = f"<b>{pp.pattern_name}</b> en {league} — patrón claro."
+                else:
+                    opening = f"<b>{pp.pattern_name}</b> — patrón claro."
+                d["narrative"] = {
+                    "opening": opening,
+                    "bullets": pp.bullets,
+                }
+                pattern_picks.append(d)
+
+            logger.info(
+                "Pattern scan: detected=%d unique=%d published=%d",
+                len(pattern_records),
+                len(best_per_key),
+                len(pattern_picks),
+            )
+        except Exception:
+            logger.exception("Pattern scan failed (continuing)")
+
     value_picks, fallback = _select_picks(candidates)
 
     # Picks for display: value picks first; if none, the fallback (single).
@@ -295,6 +366,7 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
         items=items,
         picks=pick_dicts,
         is_fallback_pick=(not value_picks and fallback is not None),
+        pattern_picks=pattern_picks,
     )
 
     if days_offset == 0:

@@ -69,6 +69,27 @@ class TeamForm:
     def clean_sheets(self) -> int:
         return sum(1 for ga in self.goals_against if ga == 0)
 
+    def scored_in_last(self, n: int) -> int:
+        """How many of the last n matches the team scored at least once."""
+        return sum(1 for g in self.goals_for[:n] if g > 0)
+
+    def conceded_in_last(self, n: int) -> int:
+        return sum(1 for g in self.goals_against[:n] if g > 0)
+
+    def over_2_5_in_last(self, n: int) -> int:
+        sliced = list(zip(self.goals_for[:n], self.goals_against[:n]))
+        return sum(1 for gf, ga in sliced if gf + ga >= 3)
+
+    def btts_in_last(self, n: int) -> int:
+        sliced = list(zip(self.goals_for[:n], self.goals_against[:n]))
+        return sum(1 for gf, ga in sliced if gf > 0 and ga > 0)
+
+    def wins_in_last(self, n: int) -> int:
+        return sum(1 for r in self.last_results[:n] if r == "W")
+
+    def losses_in_last(self, n: int) -> int:
+        return sum(1 for r in self.last_results[:n] if r == "L")
+
 
 @dataclass
 class HeadToHead:
@@ -126,6 +147,30 @@ class HeadToHead:
             for fx in self.fixtures
             if ((fx.get("score_home") or 0) + (fx.get("score_away") or 0)) >= 3
         ) / len(self.fixtures)
+
+    def team_scored_count(self, team_id: int) -> int:
+        """How many H2H fixtures had `team_id` score at least one goal."""
+        n = 0
+        for fx in self.fixtures:
+            sh = fx.get("score_home") or 0
+            sa = fx.get("score_away") or 0
+            is_home = fx.get("home_team_api_id") == team_id
+            own = sh if is_home else sa
+            if own > 0:
+                n += 1
+        return n
+
+    def team_won_count(self, team_id: int) -> int:
+        n = 0
+        for fx in self.fixtures:
+            sh = fx.get("score_home") or 0
+            sa = fx.get("score_away") or 0
+            is_home = fx.get("home_team_api_id") == team_id
+            own = sh if is_home else sa
+            other = sa if is_home else sh
+            if own > other:
+                n += 1
+        return n
 
 
 @dataclass

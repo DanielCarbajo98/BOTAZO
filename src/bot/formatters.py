@@ -239,6 +239,46 @@ def _confidence_emoji(label: str) -> str:
     return {"alta": "🟢", "media": "🟡", "baja": "🟠"}.get(label, "⚪")
 
 
+def _pattern_pick_block(idx: int, p: dict) -> List[str]:
+    """Compact tipster-style block for a pattern pick. Same vibe as the
+    example tweet: title, hook, dash bullets, pick + odds + stake, CTA.
+    """
+    confidence = p.get("confidence", "baja")
+    emoji = _confidence_emoji(confidence)
+    pick_label = _outcome_label(p.get("market", ""), p.get("outcome", ""))
+    book = p.get("bookmaker") or "?"
+    odds = p.get("market_odds") or 0
+    stake = p.get("recommended_stake_pct") or 0
+    pattern_name = p.get("pattern_name") or "Patrón"
+    bullets = (p.get("narrative") or {}).get("bullets") or p.get("bullets") or []
+    opening = (p.get("narrative") or {}).get("opening")
+    strength = p.get("pattern_strength", 0) * 100
+
+    lines: List[str] = [
+        f"{emoji} <b>#{idx} · {_esc(pattern_name)}</b>  ·  Fuerza <b>{strength:.0f}%</b>",
+        "",
+        f"⚽ <b>{_esc(p.get('match_label', '?'))}</b>",
+    ]
+    if opening:
+        lines.append("")
+        lines.append(f"<i>{opening}</i>")
+    if bullets:
+        lines.append("")
+        for b in bullets:
+            lines.append(f"— {b}")
+    lines.append("")
+    lines.append(
+        f"📌 <b>{_esc(pick_label)}</b> @ <b>{odds:.2f}</b>  ·  🏛️ {_esc(book)}"
+    )
+    lines.append(
+        f"💵 Stake: <b>{stake*100:.2f}%</b> de tu banca  ·  Confianza <b>{_esc(confidence)}</b>"
+    )
+    lines.append("")
+    lines.append("<i>¿Te juegas algo o lo dejas pasar? 🤔</i>")
+    lines.append("")
+    return lines
+
+
 def _pick_block(idx: int, p: dict) -> List[str]:
     """Tipster-style pick rendering. Layout:
 
@@ -305,6 +345,7 @@ def daily_report(
     items: List[dict],
     picks: List[dict],
     is_fallback_pick: bool = False,
+    pattern_picks: Optional[List[dict]] = None,
 ) -> str:
     """`picks` is a list of ValueBet.as_display() dicts.
     `is_fallback_pick`: True when picks contains a single 'pick of the day'
@@ -314,6 +355,16 @@ def daily_report(
         f"🎯 <b>Audiobet — {_esc(report_date)}</b>",
         "",
     ]
+
+    # PATTERN PICKS — top of the message because they're the highest
+    # confidence "tipster" reads.
+    if pattern_picks:
+        lines.append(DIVIDER)
+        lines.append(f"🔥 <b>PATRONES DETECTADOS — {len(pattern_picks)}</b>")
+        lines.append(DIVIDER)
+        lines.append("")
+        for idx, pp in enumerate(pattern_picks, start=1):
+            lines.extend(_pattern_pick_block(idx, pp))
 
     lines.append(DIVIDER)
     if picks and not is_fallback_pick:
