@@ -105,6 +105,24 @@ def all_finished_fixtures() -> List[dict]:
     return out
 
 
+def head_to_head_fixtures(team_a: int, team_b: int, limit: int = 10) -> List[dict]:
+    """Most recent finished fixtures between two teams (either side as home)."""
+    client = get_client()
+    res = (
+        client.table("fixtures")
+        .select("*")
+        .or_(
+            f"and(home_team_api_id.eq.{team_a},away_team_api_id.eq.{team_b}),"
+            f"and(home_team_api_id.eq.{team_b},away_team_api_id.eq.{team_a})"
+        )
+        .eq("status", "finished")
+        .order("date", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return res.data or []
+
+
 def find_team_by_name(name_substring: str) -> List[dict]:
     """Case-insensitive partial name match. Used by the manual predictor CLI."""
     client = get_client()

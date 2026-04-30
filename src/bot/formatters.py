@@ -240,23 +240,64 @@ def _confidence_emoji(label: str) -> str:
 
 
 def _pick_block(idx: int, p: dict) -> List[str]:
+    """Tipster-style pick rendering. Layout:
+
+        🟢 PICK #N
+        ⚽ Match name
+
+        Opening hook line.
+
+        — bullet 1
+        — bullet 2
+        — bullet 3
+
+        📌 Pick @ odds (book) · Stake X%
+        📊 Modelo / Mercado / Edge
+
+        ¿Te juegas algo o lo dejas pasar? 🤔
+    """
     confidence = p.get("confidence", "baja")
     emoji = _confidence_emoji(confidence)
     edge = p.get("edge", 0) * 100
     ev = p.get("expected_value", 0) * 100
     pick_label = _outcome_label(p.get("market", ""), p.get("outcome", ""))
     book = p.get("bookmaker") or "?"
-    return [
-        f"{emoji} <b>Pick #{idx}</b>  ·  Edge <b>+{edge:.1f}%</b>  ·  EV <b>+{ev:.1f}%</b>",
-        f"⚽ <b>{_esc(p.get('match_label', '?'))}</b>",
-        f"📌 Apuesta: <b>{_esc(pick_label)}</b>",
-        f"💸 Cuota: <b>{p.get('market_odds', 0):.2f}</b>  ·  🏛️ {_esc(book)}",
-        f"📊 Modelo <b>{p.get('model_probability', 0)*100:.1f}%</b>  "
-        f"vs Mercado justo <b>{p.get('implied_probability', 0)*100:.1f}%</b>",
-        f"💵 Stake: <b>{p.get('recommended_stake_pct', 0)*100:.2f}%</b> de tu banca",
-        f"⭐ Confianza: <b>{_esc(confidence)}</b>",
+    narrative = p.get("narrative") or {}
+
+    lines: List[str] = [
+        f"{emoji} <b>PICK #{idx}</b>  ·  Confianza <b>{_esc(confidence)}</b>",
         "",
+        f"⚽ <b>{_esc(p.get('match_label', '?'))}</b>",
     ]
+
+    opening = narrative.get("opening")
+    if opening:
+        lines.append("")
+        lines.append(f"<i>{opening}</i>")
+
+    bullets = narrative.get("bullets") or []
+    if bullets:
+        lines.append("")
+        for b in bullets:
+            lines.append(f"— {b}")
+
+    lines.append("")
+    lines.append(
+        f"📌 <b>{_esc(pick_label)}</b> @ <b>{p.get('market_odds', 0):.2f}</b>  "
+        f"·  🏛️ {_esc(book)}"
+    )
+    lines.append(
+        f"📊 Modelo <b>{p.get('model_probability', 0)*100:.0f}%</b>  vs  "
+        f"Mercado <b>{p.get('implied_probability', 0)*100:.0f}%</b>  "
+        f"·  Edge <b>+{edge:.1f}%</b>  ·  EV <b>+{ev:.1f}%</b>"
+    )
+    lines.append(
+        f"💵 Stake: <b>{p.get('recommended_stake_pct', 0)*100:.2f}%</b> de tu banca"
+    )
+    lines.append("")
+    lines.append("<i>¿Te juegas algo o lo dejas pasar? 🤔</i>")
+    lines.append("")
+    return lines
 
 
 def daily_report(

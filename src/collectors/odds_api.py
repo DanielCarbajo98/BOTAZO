@@ -148,27 +148,43 @@ class OddsApiCollector:
         if not sport_key:
             return []
         url = self._url(sport_key)
-        logger.info("Odds API fetching %s (%s)", code, sport_key)
-        try:
-            response = await self.client.get(
-                url,
-                params={
-                    "apiKey": self.api_key,
-                    "regions": "eu",
-                    "markets": "h2h,totals,btts",
-                    "oddsFormat": "decimal",
-                    "dateFormat": "iso",
-                },
-                headers={"Accept": "application/json"},
-            )
-            response.raise_for_status()
-            payload = response.json()
-        except Exception:
-            logger.exception("Odds API fetch failed for %s", code)
-            return []
-        records = parse_odds_payload(payload)
-        logger.info("Odds API %s: %d matches with quotes", code, len(records))
-        return records
+        # Try the rich market list first; if the plan doesn't include some
+        # of them The Odds API returns 422 — we then retry with the basics.
+        for markets in ("h2h,totals,btts,spreads,double_chance", "h2h,totals,btts", "h2h,totals"):
+            logger.info("Odds API fetching %s (%s) markets=%s", code, sport_key, markets)
+            try:
+                response = await self.client.get(
+                    url,
+                    params={
+                        "apiKey": self.api_key,
+                        "regions": "eu,uk",
+                        "markets": markets,
+                        "oddsFormat": "decimal",
+                        "dateFormat": "iso",
+                    },
+                    headers={"Accept": "application/json"},
+                )
+                if response.status_code == 422:
+                    logger.warning(
+                        "Odds API rejected markets=%s for %s; retrying with simpler set",
+                        markets,
+                        sport_key,
+                    )
+                    continue
+                response.raise_for_status()
+                payload = response.json()
+                records = parse_odds_payload(payload)
+                logger.info(
+                    "Odds API %s: %d matches with quotes (markets=%s)",
+                    code,
+                    len(records),
+                    markets,
+                )
+                return records
+            except Exception:
+                logger.exception("Odds API fetch failed for %s with markets=%s", code, markets)
+                continue
+        return []
 
     async def fetch_all(self) -> List[dict]:
         out: List[dict] = []

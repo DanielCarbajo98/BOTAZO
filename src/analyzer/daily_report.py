@@ -23,6 +23,8 @@ import pytz
 from telegram import Bot
 from telegram.constants import ParseMode
 
+from src.analyzer.match_context import build_match_context
+from src.analyzer.narrative import build_narrative
 from src.analyzer.predictions import predictions_for_fixtures
 from src.analyzer.tennis_predictions import get_tennis_rater, predict_match as predict_tennis_match
 from src.bot import formatters
@@ -264,10 +266,34 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
     if days_offset == 0:
         _persist_picks(display_picks)
 
+    # Build a tipster-style narrative for each displayed football pick.
+    pick_dicts: list[dict] = []
+    for p in display_picks:
+        d = p.as_display()
+        # Tennis picks have no fixture row in `fixtures`; skip narrative.
+        if p.market == "H2H":
+            d["narrative"] = None
+            pick_dicts.append(d)
+            continue
+        try:
+            fx = next(
+                (it["fixture"] for it in items if it["fixture"].get("api_id") == p.fixture_api_id),
+                None,
+            )
+            if fx is None:
+                d["narrative"] = None
+            else:
+                ctx = build_match_context(fx)
+                d["narrative"] = build_narrative(ctx, p.market, p.outcome)
+        except Exception:
+            logger.exception("Narrative build failed for fixture %s", p.fixture_api_id)
+            d["narrative"] = None
+        pick_dicts.append(d)
+
     message = formatters.daily_report(
         report_date=report_date,
         items=items,
-        picks=[p.as_display() for p in display_picks],
+        picks=pick_dicts,
         is_fallback_pick=(not value_picks and fallback is not None),
     )
 
