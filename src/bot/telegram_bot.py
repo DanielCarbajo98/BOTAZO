@@ -130,7 +130,6 @@ def build_application(config: Config) -> Application:
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("hoy", hoy))
     app.add_handler(CommandHandler("manana", manana))
-    app.add_handler(CommandHandler("mañana", manana))
     app.add_handler(CommandHandler("partidos", partidos))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("informe", informe))
