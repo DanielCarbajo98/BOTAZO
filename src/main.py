@@ -31,7 +31,7 @@ def schedule_jobs(scheduler: AsyncIOScheduler, config: Config) -> None:
     scheduler.add_job(
         send_daily_report,
         trigger=trigger,
-        args=[config],
+        kwargs={"config": config},
         id="daily_report",
         replace_existing=True,
         misfire_grace_time=600,

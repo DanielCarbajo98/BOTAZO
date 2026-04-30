@@ -4,10 +4,10 @@ Bot de Telegram que cada mañana envía un análisis de los partidos del día co
 detección de **value bets** (apuestas con valor esperado positivo) sobre
 fútbol.
 
-> Estado actual: **Fase 3** — modelo de probabilidades operativo
-> (Dixon-Coles Poisson + xG ajustado de últimos 10 partidos + Elo dinámico
-> con ventaja local). Detector de valor y reporte diario real llegarán en
-> Fase 4.
+> Estado actual: **Fase 4** — value detector + reporte diario real. El
+> bot compara probabilidades propias contra cuotas de mercado (The Odds
+> API) y publica picks con edge ≥ 5% y stake recomendado vía Kelly
+> fraccional (25%) cada día a las 09:00 Europe/Madrid.
 
 ## Stack
 
@@ -104,7 +104,8 @@ audiobet/
 |---------|--------|-------------|
 | `/start` | ✅ Fase 1 | Mensaje de bienvenida |
 | `/help`  | ✅ Fase 1 | Ayuda |
-| `/hoy`   | ✅ Fase 2 (sin picks aún) | Partidos del día desde Supabase |
+| `/hoy`   | ✅ Fase 3 | Partidos del día con predicciones del modelo |
+| `/informe` | ✅ Fase 4 | Fuerza el informe diario ahora (con picks de valor si hay cuotas) |
 | `/stats` | 🟡 Placeholder (Fase 5)   | ROI, hit rate, drawdown histórico |
 
 El bot también envía automáticamente un informe a las **09:00 Europe/Madrid**.
@@ -195,7 +196,7 @@ equipo, replay de Elo sobre todos los finalizados de la temporada y devuelve:
 - **Fase 1 — Infraestructura básica** ✅
 - **Fase 2 — Collectors football-data + Understat** ✅
 - **Fase 3 — Modelo Poisson + xG + Elo** ✅
-- Fase 4 — Cuotas + value detector + reporte diario real
+- **Fase 4 — Cuotas + value detector + reporte diario real** ✅
 - Fase 5 — Stats individuales + tracking de picks resueltas
 
 ## Filosofía

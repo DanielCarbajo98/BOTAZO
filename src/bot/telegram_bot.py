@@ -14,6 +14,8 @@ from telegram.ext import (
     ContextTypes,
 )
 
+from src.analyzer.daily_report import build_daily_report
+from src.analyzer.predictions import predictions_for_fixtures
 from src.bot import formatters
 from src.config import Config
 from src.storage.repository import fixtures_on_date
@@ -40,10 +42,17 @@ async def hoy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("/hoy from chat_id=%s", update.effective_chat.id)
     config: Config = context.application.bot_data.get("config")
     tz_name = config.timezone if config else "Europe/Madrid"
+    await update.message.reply_text(
+        "Calculando predicciones, dame unos segundos…"
+    )
     try:
         today_local = datetime.now(pytz.timezone(tz_name)).date()
         rows = fixtures_on_date(today_local)
-        text = formatters.fixtures_today(rows)
+        if not rows:
+            text = formatters.fixtures_today(rows)
+        else:
+            items = predictions_for_fixtures(rows)
+            text = formatters.fixtures_today_with_predictions(items)
     except Exception:
         logger.exception("Error fetching fixtures for /hoy")
         text = (
@@ -60,6 +69,23 @@ async def stats(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+async def informe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Force the daily report to run on demand. Useful for verification."""
+    logger.info("/informe from chat_id=%s", update.effective_chat.id)
+    config: Config = context.application.bot_data.get("config")
+    await update.message.reply_text(
+        "Generando informe (esto puede tardar 10-30s si tengo que pedir cuotas)…"
+    )
+    try:
+        text = await build_daily_report(config)
+        await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+    except Exception:
+        logger.exception("/informe failed")
+        await update.message.reply_text(
+            "El informe falló. Mira los logs del worker."
+        )
+
+
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.exception("Unhandled error while processing update", exc_info=context.error)
 
@@ -71,5 +97,6 @@ def build_application(config: Config) -> Application:
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("hoy", hoy))
     app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("informe", informe))
     app.add_error_handler(on_error)
     return app

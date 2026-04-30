@@ -21,7 +21,8 @@ def help_message() -> str:
     return (
         "*Ayuda — Audiobet*\n\n"
         "/start — mensaje de bienvenida\n"
-        "/hoy — partidos del día con picks de valor (edge ≥ 5%)\n"
+        "/hoy — partidos del día con predicciones del modelo\n"
+        "/informe — fuerza el informe diario ahora (con picks de valor si hay cuotas)\n"
         "/stats — ROI, hit rate y métricas históricas\n"
         "/help — esta ayuda\n\n"
         "Audiobet detecta valor, no predice el futuro. "
@@ -52,7 +53,7 @@ def fixtures_today(fixtures: Iterable[dict]) -> str:
     if not fixtures:
         return (
             f"*Partidos del {today}*\n\n"
-            "No hay partidos en las ligas seguidas (top 5 europeas + Champions/Europa).\n\n"
+            "No hay partidos en las ligas seguidas (top 5 europeas + Champions League).\n\n"
             "_El detector de valor llega en la Fase 4._"
         )
 
@@ -76,6 +77,59 @@ def fixtures_today(fixtures: Iterable[dict]) -> str:
         lines.append("")
 
     lines.append("_Picks de valor aún no disponibles (llegan en Fase 4)._")
+    return "\n".join(lines).strip()
+
+
+def _pct(p: float) -> str:
+    return f"{p * 100:.0f}%"
+
+
+def fixtures_today_with_predictions(items: Iterable[dict]) -> str:
+    """`items` is a list of dicts: {fixture, prediction (MatchPrediction|None)}."""
+    items = list(items)
+    today = datetime.now().strftime("%d/%m/%Y")
+    if not items:
+        return (
+            f"*Partidos del {today}*\n\n"
+            "No hay partidos en las ligas seguidas hoy."
+        )
+
+    grouped: dict[str, list[dict]] = {}
+    for it in items:
+        fx = it["fixture"]
+        league = fx.get("league_name") or "Otros"
+        grouped.setdefault(league, []).append(it)
+
+    lines = [f"*Partidos del {today} — predicciones*", ""]
+    for league in sorted(grouped):
+        lines.append(f"*{league}*")
+        for it in sorted(grouped[league], key=lambda i: i["fixture"].get("date") or ""):
+            fx = it["fixture"]
+            pred = it.get("prediction")
+            kickoff = _kickoff_label(fx.get("date") or "")
+            home = fx.get("home_team_name") or "?"
+            away = fx.get("away_team_name") or "?"
+
+            score_h, score_a = fx.get("score_home"), fx.get("score_away")
+            if score_h is not None and score_a is not None:
+                lines.append(f"  {kickoff} — {home} {score_h}-{score_a} {away}")
+                continue
+
+            lines.append(f"  {kickoff} — {home} vs {away}")
+            if pred is None:
+                lines.append("     _datos insuficientes_")
+                continue
+            p = pred.probabilities
+            lines.append(
+                f"     1X2: {_pct(p['home_win'])} / {_pct(p['draw'])} / {_pct(p['away_win'])}"
+                f"  ·  O2.5: {_pct(p['over_2_5'])}"
+                f"  ·  BTTS: {_pct(p['btts_yes'])}"
+            )
+            lines.append(
+                f"     λ {pred.lambda_home:.2f} - {pred.lambda_away:.2f}"
+            )
+        lines.append("")
+    lines.append("_Sin cuotas todavía — value bets a partir de Fase 4._")
     return "\n".join(lines).strip()
 
 
