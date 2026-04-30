@@ -52,6 +52,7 @@ def welcome_message() -> str:
         "• /hoy — partidos de hoy con predicciones\n"
         "• /manana — partidos de mañana\n"
         "• /partidos N — partidos en N días\n"
+        "• /tenis — partidos de tenis en torneos activos\n"
         "• /informe — informe completo con picks de valor\n"
         "• /stats — rendimiento histórico\n"
         "• /help — esta ayuda\n"
@@ -72,6 +73,7 @@ def help_message() -> str:
         "• /hoy — partidos de hoy con predicciones del modelo\n"
         "• /manana — partidos de mañana\n"
         "• /partidos N — partidos dentro de N días (ej. /partidos 3)\n"
+        "• /tenis — predicciones de tenis (torneos ATP/WTA activos)\n"
         "• /informe [N] — informe del día (N=0 hoy, 1 mañana, -1 ayer)\n"
         "• /stats — ROI, hit rate, drawdown, mejores ligas/mercados\n"
         "• /help — este mensaje\n"
@@ -224,6 +226,8 @@ _OUTCOME_LABELS = {
     ("OVER_UNDER_2_5", "under_2_5"): "Menos de 2.5 goles",
     ("BTTS", "btts_yes"): "Ambos marcan: Sí",
     ("BTTS", "btts_no"): "Ambos marcan: No",
+    ("H2H", "player1_win"): "Gana jugador 1",
+    ("H2H", "player2_win"): "Gana jugador 2",
 }
 
 

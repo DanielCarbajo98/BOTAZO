@@ -20,7 +20,7 @@ from typing import Iterable, List, Optional
 
 from src.models.value_detector import MarketQuote
 from src.utils.http import RateLimitedClient
-from src.utils.ids import fixture_id, team_id
+from src.utils.ids import canonical_team_id, fixture_id, team_id
 
 logger = logging.getLogger(__name__)
 
@@ -113,14 +113,16 @@ def parse_odds_payload(payload: list) -> List[dict]:
                         )
             out.append(
                 {
-                    # Our fixture_api_id from football-data is also an integer,
-                    # but we don't have it here. We hash like fbref/understat
-                    # and rely on team_id() being used as a join key downstream.
                     "fixture_api_id": fixture_id(day, home, away),
                     "home": home,
                     "away": away,
                     "home_team_api_id": team_id(home),
                     "away_team_api_id": team_id(away),
+                    # Coarse IDs used for cross-source matching with fixtures
+                    # that came from football-data (different name spelling).
+                    "home_team_canon_id": canonical_team_id(home),
+                    "away_team_canon_id": canonical_team_id(away),
+                    "kickoff_date": day,
                     "kickoff_iso": kickoff.isoformat(),
                     "quotes": quotes,
                 }
@@ -173,3 +175,117 @@ class OddsApiCollector:
         for code in SPORT_KEYS:
             out.extend(await self.fetch_competition(code))
         return out
+
+    async def list_active_sports(self) -> List[dict]:
+        """GET /v4/sports — returns every currently in-season sport.
+
+        We use this to dynamically discover active tennis tournaments
+        without hard-coding their changing keys.
+        """
+        url = f"{BASE_URL}/sports"
+        try:
+            response = await self.client.get(
+                url,
+                params={"apiKey": self.api_key, "all": "false"},
+                headers={"Accept": "application/json"},
+            )
+            response.raise_for_status()
+            return response.json() or []
+        except Exception:
+            logger.exception("Odds API list_active_sports failed")
+            return []
+
+    async def fetch_tennis(self) -> List[dict]:
+        """Fetch h2h odds for every currently active ATP/WTA tournament.
+
+        Returns one dict per match with player names + a list of MarketQuote
+        objects (one per bookmaker). The market type is always 'H2H' and
+        outcomes are 'player1_win' / 'player2_win'.
+        """
+        sports = await self.list_active_sports()
+        tennis_keys = [
+            s["key"]
+            for s in sports
+            if isinstance(s, dict)
+            and s.get("group") == "Tennis"
+            and (s.get("active") is None or s.get("active"))
+        ]
+        if not tennis_keys:
+            logger.info("Odds API: no active tennis tournaments right now")
+            return []
+        logger.info("Odds API tennis active keys: %s", tennis_keys)
+
+        records: List[dict] = []
+        for key in tennis_keys:
+            url = self._url(key)
+            logger.info("Odds API fetching tennis %s", key)
+            try:
+                response = await self.client.get(
+                    url,
+                    params={
+                        "apiKey": self.api_key,
+                        "regions": "eu,uk",
+                        "markets": "h2h",
+                        "oddsFormat": "decimal",
+                        "dateFormat": "iso",
+                    },
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                payload = response.json()
+            except Exception:
+                logger.exception("Odds API tennis fetch failed for %s", key)
+                continue
+            records.extend(_parse_tennis_payload(payload, key))
+        logger.info("Odds API tennis: %d matches with quotes", len(records))
+        return records
+
+
+def _parse_tennis_payload(payload: list, sport_key: str) -> List[dict]:
+    out: List[dict] = []
+    for entry in payload or []:
+        try:
+            p1 = entry["home_team"]
+            p2 = entry["away_team"]
+            commence = entry.get("commence_time", "")
+            kickoff = datetime.fromisoformat(commence.replace("Z", "+00:00"))
+            quotes: List[MarketQuote] = []
+            for bk in entry.get("bookmakers") or []:
+                bk_name = bk.get("title") or bk.get("key", "?")
+                for mk in bk.get("markets") or []:
+                    if mk.get("key") != "h2h":
+                        continue
+                    for oc in mk.get("outcomes") or []:
+                        name = oc.get("name", "")
+                        try:
+                            odds = float(oc["price"])
+                        except (KeyError, ValueError, TypeError):
+                            continue
+                        if name == p1:
+                            outcome = "player1_win"
+                        elif name == p2:
+                            outcome = "player2_win"
+                        else:
+                            continue
+                        quotes.append(
+                            MarketQuote(
+                                market="H2H",
+                                outcome=outcome,
+                                bookmaker=bk_name,
+                                decimal_odds=odds,
+                            )
+                        )
+            out.append(
+                {
+                    "sport_key": sport_key,
+                    "kickoff_iso": kickoff.isoformat(),
+                    "kickoff_date": kickoff.date().isoformat(),
+                    "player1_name": p1,
+                    "player2_name": p2,
+                    "quotes": quotes,
+                }
+            )
+        except (KeyError, ValueError, TypeError):
+            logger.exception("Skipping malformed tennis odds entry")
+            continue
+    return out

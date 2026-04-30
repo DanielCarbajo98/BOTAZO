@@ -167,3 +167,108 @@ def set_config_value(key: str, value: str) -> None:
         {"key": key, "value": value, "updated_at": _now_iso()},
         on_conflict="key",
     ).execute()
+
+
+# ---------------------------------------------------------------------------
+# Tennis (Phase 6)
+# ---------------------------------------------------------------------------
+
+
+def upsert_tennis_players(players: Iterable[dict]) -> int:
+    rows = [dict(p) for p in players]
+    if not rows:
+        return 0
+    for row in rows:
+        row.setdefault("last_updated", _now_iso())
+    client = get_client()
+    client.table("tennis_players").upsert(rows, on_conflict="api_id").execute()
+    logger.info("Upserted %d tennis_players", len(rows))
+    return len(rows)
+
+
+def upsert_tennis_matches(matches: Iterable[dict]) -> int:
+    rows = [dict(m) for m in matches]
+    if not rows:
+        return 0
+    for row in rows:
+        row.setdefault("last_updated", _now_iso())
+    client = get_client()
+    # Chunked because Sackmann historicals can be 5k+ rows per year
+    chunk = 500
+    total = 0
+    for i in range(0, len(rows), chunk):
+        batch = rows[i : i + chunk]
+        client.table("tennis_matches").upsert(batch, on_conflict="api_id").execute()
+        total += len(batch)
+    logger.info("Upserted %d tennis_matches", total)
+    return total
+
+
+def update_tennis_player_ratings(snapshots: Iterable[dict]) -> int:
+    """Patch the Elo columns on tennis_players. `snapshots` items must
+    contain player_api_id plus the elo* columns."""
+    rows = list(snapshots)
+    if not rows:
+        return 0
+    client = get_client()
+    chunk = 200
+    total = 0
+    for i in range(0, len(rows), chunk):
+        batch = rows[i : i + chunk]
+        # No multi-row update endpoint; iterate within the chunk.
+        for snap in batch:
+            client.table("tennis_players").update(
+                {
+                    "elo": snap.get("elo"),
+                    "elo_clay": snap.get("elo_clay"),
+                    "elo_hard": snap.get("elo_hard"),
+                    "elo_grass": snap.get("elo_grass"),
+                    "matches_played": snap.get("matches_played"),
+                    "last_updated": _now_iso(),
+                }
+            ).eq("api_id", snap["player_api_id"]).execute()
+            total += 1
+    logger.info("Updated Elo on %d tennis_players", total)
+    return total
+
+
+def all_finished_tennis_matches(tour: Optional[str] = None) -> List[dict]:
+    """Pulls every finished tennis match for Elo seeding. Paged."""
+    client = get_client()
+    page_size = 1000
+    out: List[dict] = []
+    offset = 0
+    while True:
+        q = (
+            client.table("tennis_matches")
+            .select("api_id,date,tour,surface,winner_api_id,player1_api_id,player2_api_id")
+            .eq("status", "finished")
+            .order("date", desc=False)
+            .range(offset, offset + page_size - 1)
+        )
+        if tour:
+            q = q.eq("tour", tour)
+        res = q.execute()
+        rows = res.data or []
+        out.extend(rows)
+        if len(rows) < page_size:
+            break
+        offset += page_size
+    return out
+
+
+def tennis_player_by_canon(canon_id: int) -> Optional[dict]:
+    """Lookup a tennis player by canonical id (hashed normalised name)."""
+    # We don't currently store canon_id in the table; this is a placeholder
+    # for a future name-index. Keep the API for callers.
+    return None
+
+
+def find_tennis_player_by_name(name_substring: str, tour: Optional[str] = None) -> List[dict]:
+    client = get_client()
+    q = client.table("tennis_players").select("*").ilike("name", f"%{name_substring}%").limit(20)
+    if tour:
+        q = q.eq("tour", tour)
+    res = q.execute()
+    return res.data or []
+

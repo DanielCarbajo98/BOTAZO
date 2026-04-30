@@ -17,9 +17,14 @@ from telegram.ext import (
 from src.analyzer.daily_report import build_daily_report
 from src.analyzer.predictions import predictions_for_fixtures
 from src.analyzer.stats import compute_stats
+from src.analyzer.tennis_predictions import get_tennis_rater, predict_match as predict_tennis_match
 from src.bot import formatters
+from src.collectors.odds_api import OddsApiCollector
+from src.collectors.tennis_sackmann import player_api_id as tennis_player_api_id
 from src.config import Config
 from src.storage.repository import fixtures_on_date
+from src.utils.http import RateLimitedClient
+from src.utils.rate_limiter import DomainRateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +101,64 @@ async def partidos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await _show_fixtures_for_offset(update, context, days_offset=offset)
 
 
+async def tenis(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """List today's tennis matches with model probabilities. No odds yet."""
+    logger.info("/tenis from chat_id=%s", update.effective_chat.id)
+    config: Config = context.application.bot_data.get("config")
+    if not config or not config.odds_api_key:
+        await update.message.reply_text(
+            "Tenis no está disponible: falta ODDS_API_KEY.",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+    await update.message.reply_text("Consultando torneos activos…")
+
+    try:
+        rate_limiter = DomainRateLimiter(min_interval_seconds=3.0)
+        async with RateLimitedClient(rate_limiter=rate_limiter) as client:
+            odds = OddsApiCollector(client=client, api_key=config.odds_api_key)
+            records = await odds.fetch_tennis()
+
+        if not records:
+            await update.message.reply_text(
+                "No hay torneos de tenis activos ahora mismo.",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+
+        rater = get_tennis_rater()
+        lines = ["🎾 <b>Tenis — predicciones</b>", ""]
+        for rec in records[:25]:
+            p1 = rec.get("player1_name", "?")
+            p2 = rec.get("player2_name", "?")
+            kickoff = rec.get("kickoff_iso", "")
+            try:
+                ko = datetime.fromisoformat(kickoff).strftime("%d/%m %H:%M")
+            except Exception:
+                ko = "--"
+            atp_p1 = rater.get(tennis_player_api_id("ATP", p1)).matches
+            wta_p1 = rater.get(tennis_player_api_id("WTA", p1)).matches
+            tour = "ATP" if atp_p1 >= wta_p1 else "WTA"
+            pred = predict_tennis_match(tour, p1, p2, surface=None, rater=rater)
+            lines.append(
+                f"🕘 <b>{ko}</b> · {p1} vs {p2}  <i>({tour})</i>"
+            )
+            lines.append(
+                f"   {p1}: <b>{pred['player1_win']*100:.0f}%</b>  ·  "
+                f"{p2}: <b>{pred['player2_win']*100:.0f}%</b>"
+            )
+            lines.append("")
+
+        await update.message.reply_text(
+            "\n".join(lines).strip(), parse_mode=ParseMode.HTML
+        )
+    except Exception:
+        logger.exception("/tenis failed")
+        await update.message.reply_text(
+            "Error consultando tenis. Mira los logs."
+        )
+
+
 async def stats(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("/stats from chat_id=%s", update.effective_chat.id)
     try:
@@ -156,5 +219,6 @@ def build_application(config: Config) -> Application:
     app.add_handler(CommandHandler("partidos", partidos))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("informe", informe))
+    app.add_handler(CommandHandler("tenis", tenis))
     app.add_error_handler(on_error)
     return app

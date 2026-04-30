@@ -24,8 +24,10 @@ from telegram import Bot
 from telegram.constants import ParseMode
 
 from src.analyzer.predictions import predictions_for_fixtures
+from src.analyzer.tennis_predictions import get_tennis_rater, predict_match as predict_tennis_match
 from src.bot import formatters
 from src.collectors.odds_api import OddsApiCollector
+from src.collectors.tennis_sackmann import player_api_id as tennis_player_api_id
 from src.config import Config
 from src.models.value_detector import (
     MIN_EDGE,
@@ -40,7 +42,15 @@ from src.storage.repository import (
     set_config_value,
 )
 from src.utils.http import RateLimitedClient
+from src.utils.ids import canonical_team_id, stable_int_id
 from src.utils.rate_limiter import DomainRateLimiter
+
+
+def stable_int_id_for_tennis(date_iso: str, p1: str, p2: str) -> int:
+    """Stable id for a tennis match used as fixture_api_id in predictions
+    table. Order-insensitive so p1/p2 swap doesn't desync."""
+    pair = "|".join(sorted([p1.lower(), p2.lower()]))
+    return stable_int_id("tennis_pick", date_iso, pair)
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +59,43 @@ def _label(fx: dict) -> str:
     return f"{fx.get('home_team_name', '?')} vs {fx.get('away_team_name', '?')}"
 
 
-def _quotes_for_match(odds_records: List[dict], home_id: int, away_id: int) -> List[MarketQuote]:
+def _quotes_for_match(
+    odds_records: List[dict],
+    fixture: dict,
+) -> List[MarketQuote]:
+    """Try to find odds for this fixture in three increasingly fuzzy ways.
+
+    Returns the first non-empty match.
+    """
+    home_id = fixture.get("home_team_api_id")
+    away_id = fixture.get("away_team_api_id")
+    home_name = fixture.get("home_team_name") or ""
+    away_name = fixture.get("away_team_name") or ""
+    fixture_date = (fixture.get("date") or "")[:10]
+
+    home_canon = canonical_team_id(home_name) if home_name else None
+    away_canon = canonical_team_id(away_name) if away_name else None
+
+    # Pass 1: exact strict-ID match (works when both sources spelled identically)
     for rec in odds_records:
         if rec.get("home_team_api_id") == home_id and rec.get("away_team_api_id") == away_id:
             return rec.get("quotes") or []
+
+    # Pass 2: canonical-ID match (handles "Real Madrid CF" vs "Real Madrid")
+    if home_canon is not None and away_canon is not None:
+        for rec in odds_records:
+            if rec.get("home_team_canon_id") == home_canon and rec.get("away_team_canon_id") == away_canon:
+                return rec.get("quotes") or []
+
+    # Pass 3: same date + canonical home matches anywhere
+    if home_canon is not None and fixture_date:
+        for rec in odds_records:
+            if (
+                rec.get("kickoff_date") == fixture_date
+                and rec.get("home_team_canon_id") == home_canon
+            ):
+                return rec.get("quotes") or []
+
     return []
 
 
@@ -108,18 +151,19 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
                 odds_records = []
 
         total_quotes = 0
+        matched_fixtures = 0
+        unmatched_examples: list[str] = []
         for it in items:
             fx = it["fixture"]
             pred = it.get("prediction")
             if pred is None:
                 continue
-            quotes = _quotes_for_match(
-                odds_records,
-                fx.get("home_team_api_id"),
-                fx.get("away_team_api_id"),
-            )
+            quotes = _quotes_for_match(odds_records, fx)
             if not quotes:
+                if len(unmatched_examples) < 3:
+                    unmatched_examples.append(_label(fx))
                 continue
+            matched_fixtures += 1
             total_quotes += len(quotes)
             fair_quotes = devig_quotes(quotes)
             bets = evaluate_all_quotes(
@@ -131,10 +175,81 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
             candidates.extend(bets)
 
         logger.info(
-            "Daily report scan: %d fixtures, %d quotes, %d candidates evaluated",
+            "Daily report scan: fixtures=%d odds_records=%d matched=%d quotes=%d candidates=%d",
             len(items),
+            len(odds_records),
+            matched_fixtures,
             total_quotes,
             len(candidates),
+        )
+        if unmatched_examples:
+            logger.info("Unmatched fixtures (no odds found): %s", ", ".join(unmatched_examples))
+        if odds_records and matched_fixtures == 0:
+            sample_odds = [(rec.get("home"), rec.get("away")) for rec in odds_records[:5]]
+            logger.warning(
+                "Got %d odds records but ZERO matched. Sample odds names: %s",
+                len(odds_records),
+                sample_odds,
+            )
+
+    # ------------------------------------------------------------------
+    # TENNIS — pull active tournaments from The Odds API, predict via Elo,
+    # evaluate every quote against our model. Use the same de-vig +
+    # value-detector machinery as football for consistent picks.
+    # ------------------------------------------------------------------
+    if config.odds_api_key:
+        rate_limiter = DomainRateLimiter(min_interval_seconds=3.0)
+        async with RateLimitedClient(rate_limiter=rate_limiter) as client:
+            odds = OddsApiCollector(client=client, api_key=config.odds_api_key)
+            try:
+                tennis_records = await odds.fetch_tennis()
+            except Exception:
+                logger.exception("Tennis odds fetch failed; skipping tennis section")
+                tennis_records = []
+
+        target_iso = target_local.isoformat()
+        try:
+            rater = get_tennis_rater()
+        except Exception:
+            logger.exception("Tennis Elo unavailable; skipping tennis predictions")
+            rater = None
+
+        tennis_candidates_count = 0
+        tennis_matched = 0
+        if rater is not None:
+            for rec in tennis_records:
+                if rec.get("kickoff_date") != target_iso:
+                    continue
+                tennis_matched += 1
+                p1 = rec.get("player1_name") or ""
+                p2 = rec.get("player2_name") or ""
+                # Tour is unknown from Odds API; try ATP first, fall back to WTA
+                # (player_api_id() prefixes by tour, so we use the rating that's
+                # populated — pick whichever has more matches played).
+                p1_atp = rater.get(tennis_player_api_id("ATP", p1))
+                p1_wta = rater.get(tennis_player_api_id("WTA", p1))
+                tour = "ATP" if p1_atp.matches >= p1_wta.matches else "WTA"
+                model = predict_tennis_match(tour, p1, p2, surface=None, rater=rater)
+                model_probs = {
+                    "player1_win": model["player1_win"],
+                    "player2_win": model["player2_win"],
+                }
+                fair_quotes = devig_quotes(rec.get("quotes") or [])
+                fixture_api_id_local = stable_int_id_for_tennis(target_iso, p1, p2)
+                bets = evaluate_all_quotes(
+                    fixture_api_id=fixture_api_id_local,
+                    match_label=f"{p1} vs {p2}",
+                    model_probabilities=model_probs,
+                    fair_quotes=fair_quotes,
+                )
+                tennis_candidates_count += len(bets)
+                candidates.extend(bets)
+
+        logger.info(
+            "Tennis scan: records=%d matched=%d candidates=%d",
+            len(tennis_records),
+            tennis_matched,
+            tennis_candidates_count,
         )
 
     value_picks, fallback = _select_picks(candidates)
