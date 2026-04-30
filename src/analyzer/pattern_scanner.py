@@ -1,18 +1,13 @@
-"""Pattern-based pick scanner.
+"""Pattern-based pick scanner — strict mode.
 
-Looks for repeating statistical patterns over the last 10 matches per
-team and the last 5 head-to-head encounters. The bullets are written as
-a tipster would deliver them — averages, percentages and counts woven
-together in one or two sentences each, never a sterile "8/10".
+Only emits a pick when the same statistical pattern repeats in:
+  * AT LEAST 9 of the last 10 matches per team (90% form)
+  * AT LEAST 5 head-to-head matches available
+  * ALL of those last 5 H2H confirm the pattern (100% match)
 
-Pattern emits only when:
-  - Each team has at least 10 finished matches in the recent window.
-  - The pattern holds in >= 80% of those last 10 (so 8/10 minimum).
-  - If we have >= 3 H2H matches the same pattern must hold in H2H too,
-    with >= 80% rate (4/5 with 5 H2H, 3/4 with 4 H2H, 3/3 with 3 H2H).
-
-Live odds are required to publish — if there is no quote for the
-chosen market+outcome we skip it.
+This is intentionally aggressive: most fixtures will fail the H2H gate
+because we don't always have 5 historical encounters with scores.
+That's the trade-off for high-precision tipster picks.
 """
 from __future__ import annotations
 
@@ -29,11 +24,11 @@ from src.models.value_detector import (
 
 logger = logging.getLogger(__name__)
 
-LAST_N = 10                 # team form window
-H2H_N = 5                   # head-to-head window
-MIN_PATTERN_RATE = 0.8      # 8/10 (or 4/5 in H2H)
-MIN_LAST_N = 10
-MIN_H2H = 3
+LAST_N = 10                      # team form window
+H2H_N = 5                        # head-to-head window
+MIN_FORM_RATE = 0.9              # >= 9/10 last matches confirm
+REQUIRED_H2H = 5                 # must have at least 5 H2H matches
+MIN_H2H_RATE = 1.0               # ALL 5 H2H must confirm
 MAX_BULLETS = 4
 
 PATTERN_STAKES = {
@@ -109,12 +104,12 @@ def _strength_to_confidence(strength: float) -> str:
 
 
 def _scan_btts_yes(ctx: MatchContext) -> Optional[PatternPick]:
-    if ctx.home_form.matches_considered < MIN_LAST_N or ctx.away_form.matches_considered < MIN_LAST_N:
+    if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
 
     home_btts = ctx.home_form.btts_in_last(LAST_N)
     away_btts = ctx.away_form.btts_in_last(LAST_N)
-    if home_btts / LAST_N < MIN_PATTERN_RATE or away_btts / LAST_N < MIN_PATTERN_RATE:
+    if home_btts / LAST_N < MIN_FORM_RATE or away_btts / LAST_N < MIN_FORM_RATE:
         return None
 
     h_for = ctx.home_form.avg_goals_for
@@ -133,23 +128,24 @@ def _scan_btts_yes(ctx: MatchContext) -> Optional[PatternPick]:
         f"promedio <b>{a_for:.1f}</b> a favor y <b>{a_ag:.1f}</b> en contra.",
     ]
 
-    h2h_factor = 1.0
-    if ctx.h2h.matches >= MIN_H2H:
-        h2h_btts = sum(
-            1
-            for fx in ctx.h2h.fixtures
-            if (fx.get("score_home") or 0) > 0 and (fx.get("score_away") or 0) > 0
-        )
-        h2h_n = ctx.h2h.matches
-        h2h_factor = h2h_btts / h2h_n if h2h_n else 0
-        if h2h_factor < MIN_PATTERN_RATE:
-            return None
-        bullets.append(
-            f"En los últimos <b>{h2h_n}</b> enfrentamientos directos, se ha dado el AA en "
-            f"<b>{h2h_btts} ocasiones ({h2h_factor*100:.0f}%)</b>."
-        )
+    # STRICT H2H GATE: must have at least REQUIRED_H2H past matches
+    # AND every single one of them must confirm the pattern.
+    if ctx.h2h.matches < REQUIRED_H2H:
+        return None
+    h2h_btts = sum(
+        1
+        for fx in ctx.h2h.fixtures
+        if (fx.get("score_home") or 0) > 0 and (fx.get("score_away") or 0) > 0
+    )
+    h2h_rate = h2h_btts / ctx.h2h.matches
+    if h2h_rate < MIN_H2H_RATE:
+        return None
+    bullets.append(
+        f"En los últimos <b>{ctx.h2h.matches}</b> enfrentamientos directos se ha dado el AA en "
+        f"los <b>{h2h_btts} ({h2h_rate*100:.0f}%)</b> — patrón perfecto."
+    )
 
-    strength = (home_btts / LAST_N + away_btts / LAST_N + h2h_factor) / 3
+    strength = (home_btts / LAST_N + away_btts / LAST_N + h2h_rate) / 3
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -167,11 +163,11 @@ def _scan_btts_yes(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_btts_no(ctx: MatchContext) -> Optional[PatternPick]:
-    if ctx.home_form.matches_considered < MIN_LAST_N or ctx.away_form.matches_considered < MIN_LAST_N:
+    if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     home_no = LAST_N - ctx.home_form.btts_in_last(LAST_N)
     away_no = LAST_N - ctx.away_form.btts_in_last(LAST_N)
-    if home_no / LAST_N < MIN_PATTERN_RATE or away_no / LAST_N < MIN_PATTERN_RATE:
+    if home_no / LAST_N < MIN_FORM_RATE or away_no / LAST_N < MIN_FORM_RATE:
         return None
 
     home = ctx.fixture.get("home_team_name") or "?"
@@ -194,22 +190,22 @@ def _scan_btts_no(ctx: MatchContext) -> Optional[PatternPick]:
             f"Entre ambos suman <b>{cs_h + cs_a}</b> porterías a cero en los últimos {LAST_N*2} partidos."
         )
 
-    h2h_factor = 1.0
-    if ctx.h2h.matches >= MIN_H2H:
-        h2h_no = ctx.h2h.matches - sum(
-            1
-            for fx in ctx.h2h.fixtures
-            if (fx.get("score_home") or 0) > 0 and (fx.get("score_away") or 0) > 0
-        )
-        h2h_factor = h2h_no / ctx.h2h.matches
-        if h2h_factor < MIN_PATTERN_RATE:
-            return None
-        bullets.append(
-            f"En los últimos <b>{ctx.h2h.matches}</b> H2H, NO se dio el AA en "
-            f"<b>{h2h_no} ({h2h_factor*100:.0f}%)</b>."
-        )
+    if ctx.h2h.matches < REQUIRED_H2H:
+        return None
+    h2h_no = ctx.h2h.matches - sum(
+        1
+        for fx in ctx.h2h.fixtures
+        if (fx.get("score_home") or 0) > 0 and (fx.get("score_away") or 0) > 0
+    )
+    h2h_rate = h2h_no / ctx.h2h.matches
+    if h2h_rate < MIN_H2H_RATE:
+        return None
+    bullets.append(
+        f"En los últimos <b>{ctx.h2h.matches}</b> H2H, NO se dio el AA ni una sola vez "
+        f"<b>({h2h_no}/{ctx.h2h.matches})</b>."
+    )
 
-    strength = (home_no / LAST_N + away_no / LAST_N + h2h_factor) / 3
+    strength = (home_no / LAST_N + away_no / LAST_N + h2h_rate) / 3
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -227,11 +223,11 @@ def _scan_btts_no(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_over_2_5(ctx: MatchContext) -> Optional[PatternPick]:
-    if ctx.home_form.matches_considered < MIN_LAST_N or ctx.away_form.matches_considered < MIN_LAST_N:
+    if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     home_over = ctx.home_form.over_2_5_in_last(LAST_N)
     away_over = ctx.away_form.over_2_5_in_last(LAST_N)
-    if home_over / LAST_N < MIN_PATTERN_RATE or away_over / LAST_N < MIN_PATTERN_RATE:
+    if home_over / LAST_N < MIN_FORM_RATE or away_over / LAST_N < MIN_FORM_RATE:
         return None
 
     home = ctx.fixture.get("home_team_name") or "?"
@@ -250,22 +246,22 @@ def _scan_over_2_5(ctx: MatchContext) -> Optional[PatternPick]:
         f"Promedio combinado entre ambos: <b>{combined_avg:.1f} goles</b> por partido en sus últimos {LAST_N}.",
     ]
 
-    h2h_factor = 1.0
-    if ctx.h2h.matches >= MIN_H2H:
-        h2h_over = sum(
-            1
-            for fx in ctx.h2h.fixtures
-            if ((fx.get("score_home") or 0) + (fx.get("score_away") or 0)) >= 3
-        )
-        h2h_factor = h2h_over / ctx.h2h.matches
-        if h2h_factor < MIN_PATTERN_RATE:
-            return None
-        bullets.append(
-            f"En los últimos <b>{ctx.h2h.matches}</b> H2H se ha superado el +2.5 en "
-            f"<b>{h2h_over} ({h2h_factor*100:.0f}%)</b>."
-        )
+    if ctx.h2h.matches < REQUIRED_H2H:
+        return None
+    h2h_over = sum(
+        1
+        for fx in ctx.h2h.fixtures
+        if ((fx.get("score_home") or 0) + (fx.get("score_away") or 0)) >= 3
+    )
+    h2h_rate = h2h_over / ctx.h2h.matches
+    if h2h_rate < MIN_H2H_RATE:
+        return None
+    bullets.append(
+        f"En los últimos <b>{ctx.h2h.matches}</b> H2H se ha superado el +2.5 goles en "
+        f"<b>{h2h_over}/{ctx.h2h.matches}</b> — siempre."
+    )
 
-    strength = (home_over / LAST_N + away_over / LAST_N + h2h_factor) / 3
+    strength = (home_over / LAST_N + away_over / LAST_N + h2h_rate) / 3
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -283,11 +279,11 @@ def _scan_over_2_5(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_under_2_5(ctx: MatchContext) -> Optional[PatternPick]:
-    if ctx.home_form.matches_considered < MIN_LAST_N or ctx.away_form.matches_considered < MIN_LAST_N:
+    if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     home_under = LAST_N - ctx.home_form.over_2_5_in_last(LAST_N)
     away_under = LAST_N - ctx.away_form.over_2_5_in_last(LAST_N)
-    if home_under / LAST_N < MIN_PATTERN_RATE or away_under / LAST_N < MIN_PATTERN_RATE:
+    if home_under / LAST_N < MIN_FORM_RATE or away_under / LAST_N < MIN_FORM_RATE:
         return None
 
     home = ctx.fixture.get("home_team_name") or "?"
@@ -309,22 +305,22 @@ def _scan_under_2_5(ctx: MatchContext) -> Optional[PatternPick]:
             f"<b>{ctx.away_form.avg_goals_against:.1f}</b> goles por partido respectivamente."
         )
 
-    h2h_factor = 1.0
-    if ctx.h2h.matches >= MIN_H2H:
-        h2h_under = ctx.h2h.matches - sum(
-            1
-            for fx in ctx.h2h.fixtures
-            if ((fx.get("score_home") or 0) + (fx.get("score_away") or 0)) >= 3
-        )
-        h2h_factor = h2h_under / ctx.h2h.matches
-        if h2h_factor < MIN_PATTERN_RATE:
-            return None
-        bullets.append(
-            f"En los últimos <b>{ctx.h2h.matches}</b> H2H, "
-            f"<b>{h2h_under} ({h2h_factor*100:.0f}%)</b> quedaron por debajo de 2.5 goles."
-        )
+    if ctx.h2h.matches < REQUIRED_H2H:
+        return None
+    h2h_under = ctx.h2h.matches - sum(
+        1
+        for fx in ctx.h2h.fixtures
+        if ((fx.get("score_home") or 0) + (fx.get("score_away") or 0)) >= 3
+    )
+    h2h_rate = h2h_under / ctx.h2h.matches
+    if h2h_rate < MIN_H2H_RATE:
+        return None
+    bullets.append(
+        f"En los últimos <b>{ctx.h2h.matches}</b> H2H, los <b>{h2h_under}/{ctx.h2h.matches}</b> "
+        f"quedaron por debajo de 2.5 goles — patrón perfecto."
+    )
 
-    strength = (home_under / LAST_N + away_under / LAST_N + h2h_factor) / 3
+    strength = (home_under / LAST_N + away_under / LAST_N + h2h_rate) / 3
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -342,11 +338,11 @@ def _scan_under_2_5(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_home_dominant(ctx: MatchContext) -> Optional[PatternPick]:
-    if ctx.home_form.matches_considered < MIN_LAST_N or ctx.away_form.matches_considered < MIN_LAST_N:
+    if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     home_wins = ctx.home_form.wins_in_last(LAST_N)
     away_losses = ctx.away_form.losses_in_last(LAST_N)
-    if home_wins / LAST_N < MIN_PATTERN_RATE:
+    if home_wins / LAST_N < MIN_FORM_RATE:
         return None
     if away_losses / LAST_N < 0.5:
         return None
@@ -366,20 +362,19 @@ def _scan_home_dominant(ctx: MatchContext) -> Optional[PatternPick]:
         f"<b>{away}</b> arrastra una mala racha con <b>{away_losses} derrotas en sus últimos {LAST_N}</b>, "
         f"con apenas <b>{a_for:.1f}</b> goles a favor y <b>{a_ag:.1f}</b> en contra de media.",
     ]
-    h2h_factor = 1.0
-    if ctx.h2h.matches >= MIN_H2H:
-        home_id = ctx.fixture.get("home_team_api_id") or 0
-        h2h_home_wins = ctx.h2h.team_won_count(home_id)
-        h2h_factor = h2h_home_wins / ctx.h2h.matches
-        if h2h_factor >= 0.6:
-            bullets.append(
-                f"Histórico H2H favorable: <b>{home}</b> ha ganado "
-                f"<b>{h2h_home_wins} de los últimos {ctx.h2h.matches}</b> enfrentamientos directos."
-            )
-        else:
-            return None
+    if ctx.h2h.matches < REQUIRED_H2H:
+        return None
+    home_id = ctx.fixture.get("home_team_api_id") or 0
+    h2h_home_wins = ctx.h2h.team_won_count(home_id)
+    h2h_rate = h2h_home_wins / ctx.h2h.matches
+    if h2h_rate < MIN_H2H_RATE:
+        return None
+    bullets.append(
+        f"Histórico H2H demoledor: <b>{home}</b> ha ganado los <b>{h2h_home_wins}/{ctx.h2h.matches}</b> "
+        f"últimos enfrentamientos directos."
+    )
 
-    strength = min(1.0, 0.5 * (home_wins / LAST_N) + 0.3 * (away_losses / LAST_N) + 0.2 * h2h_factor)
+    strength = min(1.0, 0.5 * (home_wins / LAST_N) + 0.3 * (away_losses / LAST_N) + 0.2 * h2h_rate)
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -397,11 +392,11 @@ def _scan_home_dominant(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_away_dominant(ctx: MatchContext) -> Optional[PatternPick]:
-    if ctx.home_form.matches_considered < MIN_LAST_N or ctx.away_form.matches_considered < MIN_LAST_N:
+    if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     away_wins = ctx.away_form.wins_in_last(LAST_N)
     home_losses = ctx.home_form.losses_in_last(LAST_N)
-    if away_wins / LAST_N < MIN_PATTERN_RATE:
+    if away_wins / LAST_N < MIN_FORM_RATE:
         return None
     if home_losses / LAST_N < 0.5:
         return None
@@ -421,20 +416,19 @@ def _scan_away_dominant(ctx: MatchContext) -> Optional[PatternPick]:
         f"<b>{home}</b> arrastra una mala racha en casa: <b>{home_losses} derrotas en sus últimos {LAST_N}</b>, "
         f"con <b>{h_for:.1f}</b> goles a favor y <b>{h_ag:.1f}</b> en contra de media.",
     ]
-    h2h_factor = 1.0
-    if ctx.h2h.matches >= MIN_H2H:
-        away_id = ctx.fixture.get("away_team_api_id") or 0
-        h2h_away_wins = ctx.h2h.team_won_count(away_id)
-        h2h_factor = h2h_away_wins / ctx.h2h.matches
-        if h2h_factor >= 0.6:
-            bullets.append(
-                f"Histórico H2H favorable: <b>{away}</b> ha ganado "
-                f"<b>{h2h_away_wins} de los últimos {ctx.h2h.matches}</b> enfrentamientos directos."
-            )
-        else:
-            return None
+    if ctx.h2h.matches < REQUIRED_H2H:
+        return None
+    away_id = ctx.fixture.get("away_team_api_id") or 0
+    h2h_away_wins = ctx.h2h.team_won_count(away_id)
+    h2h_rate = h2h_away_wins / ctx.h2h.matches
+    if h2h_rate < MIN_H2H_RATE:
+        return None
+    bullets.append(
+        f"Histórico H2H demoledor: <b>{away}</b> ha ganado los <b>{h2h_away_wins}/{ctx.h2h.matches}</b> "
+        f"últimos enfrentamientos directos."
+    )
 
-    strength = min(1.0, 0.5 * (away_wins / LAST_N) + 0.3 * (home_losses / LAST_N) + 0.2 * h2h_factor)
+    strength = min(1.0, 0.5 * (away_wins / LAST_N) + 0.3 * (home_losses / LAST_N) + 0.2 * h2h_rate)
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
