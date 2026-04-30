@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 from telegram import Update
@@ -38,28 +38,61 @@ async def help_command(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> N
     )
 
 
-async def hoy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.info("/hoy from chat_id=%s", update.effective_chat.id)
+async def _show_fixtures_for_offset(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, days_offset: int
+) -> None:
     config: Config = context.application.bot_data.get("config")
     tz_name = config.timezone if config else "Europe/Madrid"
     await update.message.reply_text(
         "Calculando predicciones, dame unos segundos…"
     )
     try:
-        today_local = datetime.now(pytz.timezone(tz_name)).date()
-        rows = fixtures_on_date(today_local)
+        target = (datetime.now(pytz.timezone(tz_name)) + timedelta(days=days_offset)).date()
+        label = target.strftime("%d/%m/%Y")
+        rows = fixtures_on_date(target)
         if not rows:
-            text = formatters.fixtures_today(rows)
+            text = (
+                f"*Partidos del {label}*\n\n"
+                "No hay partidos en las ligas seguidas ese día."
+            )
         else:
             items = predictions_for_fixtures(rows)
-            text = formatters.fixtures_today_with_predictions(items)
+            text = formatters.fixtures_today_with_predictions(items, title_date=label)
     except Exception:
-        logger.exception("Error fetching fixtures for /hoy")
+        logger.exception("Error fetching fixtures for offset=%d", days_offset)
         text = (
-            "No he podido leer los partidos de hoy. "
+            "No he podido leer los partidos. "
             "Mira los logs del worker para ver el detalle."
         )
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def hoy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info("/hoy from chat_id=%s", update.effective_chat.id)
+    await _show_fixtures_for_offset(update, context, days_offset=0)
+
+
+async def manana(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info("/manana from chat_id=%s", update.effective_chat.id)
+    await _show_fixtures_for_offset(update, context, days_offset=1)
+
+
+async def partidos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/partidos N — partidos dentro de N días (0 = hoy, 1 = mañana, ...)."""
+    logger.info("/partidos %s from chat_id=%s", context.args, update.effective_chat.id)
+    offset = 0
+    if context.args:
+        try:
+            offset = int(context.args[0])
+        except ValueError:
+            await update.message.reply_text(
+                "Uso: /partidos N (donde N es 0=hoy, 1=mañana, 2=pasado, etc.)"
+            )
+            return
+    if not (-7 <= offset <= 14):
+        await update.message.reply_text("Solo acepto rango -7 ≤ N ≤ 14.")
+        return
+    await _show_fixtures_for_offset(update, context, days_offset=offset)
 
 
 async def stats(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -96,6 +129,9 @@ def build_application(config: Config) -> Application:
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("hoy", hoy))
+    app.add_handler(CommandHandler("manana", manana))
+    app.add_handler(CommandHandler("mañana", manana))
+    app.add_handler(CommandHandler("partidos", partidos))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("informe", informe))
     app.add_error_handler(on_error)

@@ -21,8 +21,10 @@ def help_message() -> str:
     return (
         "*Ayuda — Audiobet*\n\n"
         "/start — mensaje de bienvenida\n"
-        "/hoy — partidos del día con predicciones del modelo\n"
-        "/informe — fuerza el informe diario ahora (con picks de valor si hay cuotas)\n"
+        "/hoy — partidos de hoy con predicciones\n"
+        "/manana — partidos de mañana con predicciones\n"
+        "/partidos N — partidos dentro de N días (0=hoy, 1=mañana, …)\n"
+        "/informe — fuerza el informe diario ahora (con picks si hay cuotas)\n"
         "/stats — ROI, hit rate y métricas históricas\n"
         "/help — esta ayuda\n\n"
         "Audiobet detecta valor, no predice el futuro. "
@@ -84,14 +86,20 @@ def _pct(p: float) -> str:
     return f"{p * 100:.0f}%"
 
 
-def fixtures_today_with_predictions(items: Iterable[dict]) -> str:
-    """`items` is a list of dicts: {fixture, prediction (MatchPrediction|None)}."""
+def fixtures_today_with_predictions(
+    items: Iterable[dict],
+    title_date: str | None = None,
+) -> str:
+    """`items` is a list of dicts: {fixture, prediction (MatchPrediction|None)}.
+
+    `title_date` overrides the date string at the top (defaults to today).
+    """
     items = list(items)
-    today = datetime.now().strftime("%d/%m/%Y")
+    label = title_date or datetime.now().strftime("%d/%m/%Y")
     if not items:
         return (
-            f"*Partidos del {today}*\n\n"
-            "No hay partidos en las ligas seguidas hoy."
+            f"*Partidos del {label}*\n\n"
+            "No hay partidos en las ligas seguidas ese día."
         )
 
     grouped: dict[str, list[dict]] = {}
@@ -100,7 +108,7 @@ def fixtures_today_with_predictions(items: Iterable[dict]) -> str:
         league = fx.get("league_name") or "Otros"
         grouped.setdefault(league, []).append(it)
 
-    lines = [f"*Partidos del {today} — predicciones*", ""]
+    lines = [f"*Partidos del {label} — predicciones*", ""]
     for league in sorted(grouped):
         lines.append(f"*{league}*")
         for it in sorted(grouped[league], key=lambda i: i["fixture"].get("date") or ""):
