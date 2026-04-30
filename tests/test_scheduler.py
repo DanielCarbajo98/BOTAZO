@@ -15,6 +15,7 @@ def test_schedule_jobs_registers_daily_report():
         daily_report_hour=9,
         daily_report_minute=0,
         log_level="INFO",
+        football_data_api_key="",
     )
     scheduler = AsyncIOScheduler(timezone=pytz.timezone(config.timezone))
     schedule_jobs(scheduler, config)

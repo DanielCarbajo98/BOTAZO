@@ -20,6 +20,7 @@ class Config:
     daily_report_hour: int
     daily_report_minute: int
     log_level: str
+    football_data_api_key: str
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -32,6 +33,7 @@ class Config:
             daily_report_hour=int(os.environ.get("DAILY_REPORT_HOUR", "9")),
             daily_report_minute=int(os.environ.get("DAILY_REPORT_MINUTE", "0")),
             log_level=os.environ.get("LOG_LEVEL", "INFO"),
+            football_data_api_key=os.environ.get("FOOTBALL_DATA_API_KEY", ""),
         )
 
     def require(self) -> None:

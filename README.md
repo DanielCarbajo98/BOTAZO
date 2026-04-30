@@ -129,6 +129,28 @@ pytest -q
 Los tests de Fase 1 cubren los formatters, la carga de configuración y el
 registro del job en el scheduler.
 
+## Fuente de datos
+
+La fuente primaria de partidos es **[football-data.org](https://www.football-data.org/)**
+(API REST gratuita, 10 req/min, top 5 ligas + Champions League).
+
+FBref se queda como fallback en código pero **no funciona desde IPs de
+datacenter** (Cloudflare devuelve 403). Se mantiene el módulo por si en el
+futuro corremos desde una IP residencial.
+
+Understat sigue siendo la fuente de **xG** para top 5 ligas.
+
+### Conseguir la API key (gratis, 3 minutos)
+
+1. Regístrate en [https://www.football-data.org/client/register](https://www.football-data.org/client/register).
+2. Confirma el correo.
+3. En tu panel verás una API key larga.
+4. Añádela como variable de entorno **`FOOTBALL_DATA_API_KEY`**:
+   - En local: en `.env`.
+   - En Railway: en Variables del servicio.
+
+Sin esta clave, el bot arranca pero el refresh diario no traerá partidos.
+
 ## Migraciones de Supabase
 
 Ejecuta una sola vez la migración 002 (crea `players` y `player_match_stats`)
