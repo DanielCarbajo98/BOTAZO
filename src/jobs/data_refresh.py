@@ -60,8 +60,14 @@ async def refresh_all(
                 matches = []
 
             if matches:
-                teams_count += upsert_teams(fd_teams_from_matches(matches))
-                fixtures_count += upsert_fixtures([m.as_row() for m in matches])
+                try:
+                    teams_count += upsert_teams(fd_teams_from_matches(matches))
+                except Exception:
+                    logger.exception("upsert_teams failed (continuing)")
+                try:
+                    fixtures_count += upsert_fixtures([m.as_row() for m in matches])
+                except Exception:
+                    logger.exception("upsert_fixtures failed (continuing)")
         else:
             logger.warning(
                 "FOOTBALL_DATA_API_KEY not set; falling back to FBref scraping "
@@ -75,10 +81,16 @@ async def refresh_all(
                 fbref_fixtures = []
 
             if fbref_fixtures:
-                teams_count += upsert_teams(teams_from_fixtures(fbref_fixtures))
-                fixtures_count += upsert_fixtures(
-                    [f.as_row() for f in fbref_fixtures]
-                )
+                try:
+                    teams_count += upsert_teams(teams_from_fixtures(fbref_fixtures))
+                except Exception:
+                    logger.exception("upsert_teams failed (continuing)")
+                try:
+                    fixtures_count += upsert_fixtures(
+                        [f.as_row() for f in fbref_fixtures]
+                    )
+                except Exception:
+                    logger.exception("upsert_fixtures failed (continuing)")
 
         understat = UnderstatCollector(client=client, season=season_understat)
         try:
@@ -88,10 +100,16 @@ async def refresh_all(
             understat_matches = []
 
     if understat_matches:
-        teams_count += upsert_teams(us_teams_from_matches(understat_matches))
+        try:
+            teams_count += upsert_teams(us_teams_from_matches(understat_matches))
+        except Exception:
+            logger.exception("upsert_teams (understat) failed (continuing)")
         stats_rows = fixture_stats_rows(understat_matches)
         if stats_rows:
-            stats_count += upsert_fixture_stats(stats_rows)
+            try:
+                stats_count += upsert_fixture_stats(stats_rows)
+            except Exception:
+                logger.exception("upsert_fixture_stats failed (continuing)")
 
     try:
         marker = (
