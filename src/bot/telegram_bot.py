@@ -16,6 +16,7 @@ from telegram.ext import (
 
 from src.analyzer.daily_report import build_daily_report
 from src.analyzer.predictions import predictions_for_fixtures
+from src.analyzer.stats import compute_stats
 from src.bot import formatters
 from src.config import Config
 from src.storage.repository import fixtures_on_date
@@ -27,14 +28,14 @@ async def start(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     logger.info("/start from user_id=%s username=%s", user.id if user else "?", user.username if user else "?")
     await update.message.reply_text(
-        formatters.welcome_message(), parse_mode=ParseMode.MARKDOWN
+        formatters.welcome_message(), parse_mode=ParseMode.HTML
     )
 
 
 async def help_command(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("/help from chat_id=%s", update.effective_chat.id)
     await update.message.reply_text(
-        formatters.help_message(), parse_mode=ParseMode.MARKDOWN
+        formatters.help_message(), parse_mode=ParseMode.HTML
     )
 
 
@@ -64,7 +65,7 @@ async def _show_fixtures_for_offset(
             "No he podido leer los partidos. "
             "Mira los logs del worker para ver el detalle."
         )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
 async def hoy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -97,9 +98,16 @@ async def partidos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def stats(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("/stats from chat_id=%s", update.effective_chat.id)
-    await update.message.reply_text(
-        formatters.stats_placeholder(), parse_mode=ParseMode.MARKDOWN
-    )
+    try:
+        summary = compute_stats()
+        text = formatters.stats_summary(summary)
+    except Exception:
+        logger.exception("/stats failed")
+        text = (
+            "No he podido calcular las estadísticas. "
+            "Mira los logs del worker para ver el detalle."
+        )
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
 async def informe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -111,7 +119,7 @@ async def informe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
     try:
         text = await build_daily_report(config)
-        await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+        await update.message.reply_text(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     except Exception:
         logger.exception("/informe failed")
         await update.message.reply_text(

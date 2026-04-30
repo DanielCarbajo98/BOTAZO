@@ -14,12 +14,6 @@ def test_help_message_contains_all_commands():
         assert cmd in msg
 
 
-def test_today_placeholder_has_date():
-    msg = formatters.today_placeholder()
-    assert "Informe" in msg
-    assert "/" in msg  # date contains slashes
-
-
 def test_stats_placeholder_mentions_metrics():
     msg = formatters.stats_placeholder()
     assert "ROI" in msg or "hit rate" in msg.lower()

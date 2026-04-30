@@ -17,6 +17,7 @@ from src.analyzer.daily_report import send_daily_report
 from src.bot.telegram_bot import build_application
 from src.config import Config, setup_logging
 from src.jobs.data_refresh import refresh_all
+from src.jobs.resolve_picks import resolve_picks
 
 logger = logging.getLogger("audiobet")
 
@@ -52,6 +53,16 @@ def schedule_jobs(scheduler: AsyncIOScheduler, config: Config) -> None:
         misfire_grace_time=1800,
     )
     logger.info("Scheduled data_refresh at 02:00 %s", config.timezone)
+
+    resolve_trigger = CronTrigger(hour=3, minute=0, timezone=tz)
+    scheduler.add_job(
+        resolve_picks,
+        trigger=resolve_trigger,
+        id="resolve_picks",
+        replace_existing=True,
+        misfire_grace_time=1800,
+    )
+    logger.info("Scheduled resolve_picks at 03:00 %s", config.timezone)
 
 
 async def run() -> None:

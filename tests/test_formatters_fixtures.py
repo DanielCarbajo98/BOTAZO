@@ -27,8 +27,10 @@ def test_fixtures_today_groups_by_league():
         },
     ]
     msg = fixtures_today(rows)
-    assert "*La Liga*" in msg
-    assert "*Premier League*" in msg
+    assert "La Liga" in msg
+    assert "Premier League" in msg
     assert "Real Madrid 2-1 Barcelona" in msg
     assert "Arsenal vs Chelsea" in msg
     assert "21:00" in msg and "18:30" in msg
+    # HTML formatting present
+    assert "<b>" in msg

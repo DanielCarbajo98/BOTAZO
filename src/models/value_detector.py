@@ -65,6 +65,12 @@ class ValueBet:
             ),
         }
 
+    def as_display(self) -> dict:
+        """Same fields as_row plus bookmaker, for the report formatter."""
+        row = self.as_row()
+        row["bookmaker"] = self.bookmaker
+        return row
+
 
 def implied_probability(decimal_odds: float) -> float:
     if decimal_odds <= 1.0:
