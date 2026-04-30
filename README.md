@@ -4,9 +4,10 @@ Bot de Telegram que cada mañana envía un análisis de los partidos del día co
 detección de **value bets** (apuestas con valor esperado positivo) sobre
 fútbol.
 
-> Estado actual: **Fase 1** — infraestructura y bot Telegram funcional con los
-> comandos básicos. Los collectors, modelos y detector de valor llegarán en
-> fases posteriores.
+> Estado actual: **Fase 2** — bot Telegram funcional, scrapers de FBref y
+> Understat operativos, refresh nocturno a las 02:00, comando `/hoy` listando
+> partidos reales del día. Modelo de probabilidades y detector de valor
+> llegarán en Fases 3-4.
 
 ## Stack
 
@@ -103,7 +104,7 @@ audiobet/
 |---------|--------|-------------|
 | `/start` | ✅ Fase 1 | Mensaje de bienvenida |
 | `/help`  | ✅ Fase 1 | Ayuda |
-| `/hoy`   | 🟡 Placeholder (Fase 2-4) | Partidos del día con picks de valor |
+| `/hoy`   | ✅ Fase 2 (sin picks aún) | Partidos del día desde Supabase |
 | `/stats` | 🟡 Placeholder (Fase 5)   | ROI, hit rate, drawdown histórico |
 
 El bot también envía automáticamente un informe a las **09:00 Europe/Madrid**.
@@ -128,10 +129,32 @@ pytest -q
 Los tests de Fase 1 cubren los formatters, la carga de configuración y el
 registro del job en el scheduler.
 
+## Migraciones de Supabase
+
+Ejecuta una sola vez la migración 002 (crea `players` y `player_match_stats`)
+desde el **SQL Editor** de Supabase:
+
+```
+src/storage/migrations/002_player_stats.sql
+```
+
+Pega el contenido en el editor SQL del dashboard y dale a Run.
+
+## Refresh manual de datos
+
+El bot lanza un refresh ~30s después de arrancar y luego cada noche a las
+02:00 Europe/Madrid. Para forzarlo a mano:
+
+```bash
+PYTHONPATH=. python scripts/refresh_now.py
+```
+
+Lee de FBref (fixtures + scores) y Understat (xG) y hace upsert en Supabase.
+
 ## Roadmap
 
 - **Fase 1 — Infraestructura básica** ✅
-- Fase 2 — Collectors FBref + Understat
+- **Fase 2 — Collectors FBref + Understat** ✅
 - Fase 3 — Modelo Poisson + xG + Elo
 - Fase 4 — Cuotas + value detector + reporte diario real
 - Fase 5 — Stats individuales + tracking de picks resueltas

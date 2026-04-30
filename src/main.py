@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timedelta
 
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -15,6 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 from src.analyzer.daily_report import send_daily_report
 from src.bot.telegram_bot import build_application
 from src.config import Config, setup_logging
+from src.jobs.data_refresh import refresh_all
 
 logger = logging.getLogger("audiobet")
 
@@ -41,6 +43,16 @@ def schedule_jobs(scheduler: AsyncIOScheduler, config: Config) -> None:
         config.timezone,
     )
 
+    refresh_trigger = CronTrigger(hour=2, minute=0, timezone=tz)
+    scheduler.add_job(
+        refresh_all,
+        trigger=refresh_trigger,
+        id="data_refresh",
+        replace_existing=True,
+        misfire_grace_time=1800,
+    )
+    logger.info("Scheduled data_refresh at 02:00 %s", config.timezone)
+
 
 async def run() -> None:
     config = Config.from_env()
@@ -57,6 +69,18 @@ async def run() -> None:
     await application.start()
     scheduler.start()
     await application.updater.start_polling()
+
+    # Kick off a one-shot refresh ~30s after boot so /hoy has data without
+    # waiting until the next 02:00 cron tick. Non-blocking, errors are logged.
+    scheduler.add_job(
+        refresh_all,
+        id="data_refresh_boot",
+        replace_existing=True,
+        next_run_time=datetime.now(pytz.timezone(config.timezone))
+        + timedelta(seconds=30),
+        misfire_grace_time=300,
+    )
+    logger.info("Scheduled one-shot data_refresh ~30s after boot")
 
     logger.info("Audiobet is up. Press Ctrl+C to stop.")
     try:
