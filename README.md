@@ -68,7 +68,19 @@ audiobet/
    - `SUPABASE_URL` y `SUPABASE_KEY` — desde el dashboard de Supabase, en
      **Settings → API**: usa la URL del proyecto y la `anon public key`.
 
-5. Lanza el bot:
+5. (Opcional pero recomendado) Verifica las credenciales antes de arrancar:
+
+   ```bash
+   PYTHONPATH=. python scripts/preflight.py
+   ```
+
+   El script hace `getMe` + `getChat` + `send_message` contra Telegram y un
+   `select` sobre tres tablas de Supabase. Si todo sale en `OK`, las
+   credenciales están bien. Si falla `send_message` a un canal, asegúrate de
+   que el bot está añadido como **administrador** con permiso de "Publicar
+   mensajes".
+
+6. Lanza el bot:
 
    ```bash
    python -m src.main
