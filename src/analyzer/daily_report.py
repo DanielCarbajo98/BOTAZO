@@ -3,14 +3,20 @@
 Pipeline:
 1. List today's fixtures from Supabase.
 2. Run the Phase-3 predictor for each.
-3. If ODDS_API_KEY is set, fetch market odds and detect value bets.
-4. Format a single Telegram message (HTML) and send to TELEGRAM_CHAT_ID.
-5. Persist picks to the predictions table for later P&L tracking.
+3. If ODDS_API_KEY is set, fetch market odds and de-vig them.
+4. Evaluate every (match, market, outcome) combination — store edges.
+5. Build the report:
+   - All bets with edge >= MIN_EDGE  ->  "Value picks" section.
+   - If none, but the highest-edge candidate has POSITIVE EV ->
+     publish it as "Pick del día (confianza baja)".
+   - If even the best candidate has negative EV -> honest "no value
+     today, better to pass" message.
+6. Persist published picks (offset=0 only) to predictions table.
 """
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 import pytz
@@ -22,10 +28,12 @@ from src.bot import formatters
 from src.collectors.odds_api import OddsApiCollector
 from src.config import Config
 from src.models.value_detector import (
+    MIN_EDGE,
     MarketQuote,
     ValueBet,
     best_value_bet_per_market,
-    detect_value_bets,
+    devig_quotes,
+    evaluate_all_quotes,
 )
 from src.storage.repository import (
     fixtures_on_date,
@@ -60,16 +68,27 @@ def _persist_picks(picks: List[ValueBet]) -> None:
         logger.exception("Failed to persist picks (non-fatal)")
 
 
-async def build_daily_report(config: Config, days_offset: int = 0) -> str:
-    """Build the report for today (offset=0) or any future/past day.
+def _select_picks(all_candidates: List[ValueBet]) -> tuple[List[ValueBet], Optional[ValueBet]]:
+    """Return (value_picks, fallback_pick).
 
-    `days_offset` follows the same convention as /partidos: 0 = today,
-    1 = tomorrow, -1 = yesterday. Picks for non-today reports are NOT
-    persisted to the predictions table — we only track stakes we
-    actually announce to the channel at 09:00.
+    value_picks: every candidate with edge >= MIN_EDGE, deduped per market.
+    fallback_pick: the single best candidate when there are no value picks
+      AND its EV is positive — used as 'Pick del día (confianza baja)'.
     """
-    from datetime import timedelta
+    value_picks = best_value_bet_per_market([c for c in all_candidates if c.edge >= MIN_EDGE])
+    if value_picks:
+        return value_picks, None
 
+    if not all_candidates:
+        return [], None
+
+    best = max(all_candidates, key=lambda c: c.edge)
+    if best.expected_value > 0 and best.edge > 0:
+        return [], best
+    return [], None
+
+
+async def build_daily_report(config: Config, days_offset: int = 0) -> str:
     tz = pytz.timezone(config.timezone)
     target_local = (datetime.now(tz) + timedelta(days=days_offset)).date()
     report_date = target_local.strftime("%d/%m/%Y")
@@ -77,7 +96,7 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
     fixtures = fixtures_on_date(target_local)
     items = predictions_for_fixtures(fixtures)
 
-    picks: List[ValueBet] = []
+    candidates: List[ValueBet] = []
     if config.odds_api_key and items:
         rate_limiter = DomainRateLimiter(min_interval_seconds=3.0)
         async with RateLimitedClient(rate_limiter=rate_limiter) as client:
@@ -88,6 +107,7 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
                 logger.exception("Odds fetch failed; proceeding without picks")
                 odds_records = []
 
+        total_quotes = 0
         for it in items:
             fx = it["fixture"]
             pred = it.get("prediction")
@@ -100,31 +120,48 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
             )
             if not quotes:
                 continue
-            bets = detect_value_bets(
+            total_quotes += len(quotes)
+            fair_quotes = devig_quotes(quotes)
+            bets = evaluate_all_quotes(
                 fixture_api_id=fx.get("api_id"),
                 match_label=_label(fx),
                 model_probabilities=pred.probabilities,
-                quotes=quotes,
+                fair_quotes=fair_quotes,
             )
-            picks.extend(bets)
+            candidates.extend(bets)
 
-        picks = best_value_bet_per_market(picks)
-        # Only persist picks for the canonical 'today' report — those are the
-        # ones we publish to the channel and want to track for ROI later.
-        if days_offset == 0:
-            _persist_picks(picks)
+        logger.info(
+            "Daily report scan: %d fixtures, %d quotes, %d candidates evaluated",
+            len(items),
+            total_quotes,
+            len(candidates),
+        )
+
+    value_picks, fallback = _select_picks(candidates)
+
+    # Picks for display: value picks first; if none, the fallback (single).
+    display_picks: List[ValueBet] = list(value_picks)
+    if not display_picks and fallback is not None:
+        display_picks = [fallback]
+
+    # Only persist for the canonical 'today' report and only if there is
+    # something to commit to publicly (matches our tracking honesty rule).
+    if days_offset == 0:
+        _persist_picks(display_picks)
 
     message = formatters.daily_report(
         report_date=report_date,
         items=items,
-        picks=[p.as_display() for p in picks],
+        picks=[p.as_display() for p in display_picks],
+        is_fallback_pick=(not value_picks and fallback is not None),
     )
 
     if days_offset == 0:
         try:
             set_config_value(
                 "last_report",
-                f"date={report_date} fixtures={len(items)} picks={len(picks)}",
+                f"date={report_date} fixtures={len(items)} "
+                f"value_picks={len(value_picks)} fallback={'yes' if fallback else 'no'}",
             )
         except Exception:
             logger.exception("Could not persist last_report marker (non-fatal)")

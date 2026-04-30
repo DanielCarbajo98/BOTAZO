@@ -235,51 +235,67 @@ def _confidence_emoji(label: str) -> str:
     return {"alta": "🟢", "media": "🟡", "baja": "🟠"}.get(label, "⚪")
 
 
-def daily_report(report_date: str, items: List[dict], picks: List[dict]) -> str:
-    """`picks` is a list of ValueBet.as_row() dicts already; we don't import
-    the dataclass to keep this module side-effect free."""
+def _pick_block(idx: int, p: dict) -> List[str]:
+    confidence = p.get("confidence", "baja")
+    emoji = _confidence_emoji(confidence)
+    edge = p.get("edge", 0) * 100
+    ev = p.get("expected_value", 0) * 100
+    pick_label = _outcome_label(p.get("market", ""), p.get("outcome", ""))
+    book = p.get("bookmaker") or "?"
+    return [
+        f"{emoji} <b>Pick #{idx}</b>  ·  Edge <b>+{edge:.1f}%</b>  ·  EV <b>+{ev:.1f}%</b>",
+        f"⚽ <b>{_esc(p.get('match_label', '?'))}</b>",
+        f"📌 Apuesta: <b>{_esc(pick_label)}</b>",
+        f"💸 Cuota: <b>{p.get('market_odds', 0):.2f}</b>  ·  🏛️ {_esc(book)}",
+        f"📊 Modelo <b>{p.get('model_probability', 0)*100:.1f}%</b>  "
+        f"vs Mercado justo <b>{p.get('implied_probability', 0)*100:.1f}%</b>",
+        f"💵 Stake: <b>{p.get('recommended_stake_pct', 0)*100:.2f}%</b> de tu banca",
+        f"⭐ Confianza: <b>{_esc(confidence)}</b>",
+        "",
+    ]
+
+
+def daily_report(
+    report_date: str,
+    items: List[dict],
+    picks: List[dict],
+    is_fallback_pick: bool = False,
+) -> str:
+    """`picks` is a list of ValueBet.as_display() dicts.
+    `is_fallback_pick`: True when picks contains a single 'pick of the day'
+    that did not clear the regular edge threshold but has positive EV.
+    """
     lines = [
         f"🎯 <b>Audiobet — {_esc(report_date)}</b>",
         "",
     ]
 
-    # Picks section
     lines.append(DIVIDER)
-    if picks:
+    if picks and not is_fallback_pick:
         lines.append(f"💰 <b>VALUE BETS — {len(picks)}</b>")
         lines.append(DIVIDER)
         lines.append("")
         ordered = sorted(picks, key=lambda p: p.get("edge", 0), reverse=True)
         for idx, p in enumerate(ordered, start=1):
-            confidence = p.get("confidence", "baja")
-            emoji = _confidence_emoji(confidence)
-            edge = p.get("edge", 0) * 100
-            lines.append(f"{emoji} <b>#{idx}</b> · Edge <b>+{edge:.1f} pts</b>")
-            lines.append(f"⚽ <b>{_esc(p.get('match_label', '?'))}</b>")
-            lines.append(
-                f"📌 Pick: <b>{_esc(_outcome_label(p.get('market', ''), p.get('outcome', '')))}</b> "
-                f"@ <b>{p.get('market_odds', 0):.2f}</b>"
-            )
-            book = p.get("bookmaker") or p.get("reasoning", "")
-            if "(" in str(p.get("reasoning", "")):
-                book = str(p.get("reasoning", "")).rsplit("(", 1)[-1].rstrip(")")
-            lines.append(f"🏛️ Bookie: {_esc(book)}")
-            lines.append(
-                f"📊 Modelo <b>{p.get('model_probability', 0)*100:.1f}%</b> "
-                f"vs Mercado <b>{p.get('implied_probability', 0)*100:.1f}%</b>"
-            )
-            lines.append(
-                f"💵 Stake: <b>{p.get('recommended_stake_pct', 0)*100:.2f}%</b> de tu banca"
-            )
-            lines.append(f"⭐ Confianza: <b>{_esc(confidence)}</b>")
-            lines.append("")
-    else:
-        lines.append("💤 <b>SIN PICKS DE VALOR HOY</b>")
+            lines.extend(_pick_block(idx, p))
+    elif is_fallback_pick and picks:
+        lines.append("⭐ <b>PICK DEL DÍA</b>  ·  <i>confianza baja</i>")
         lines.append(DIVIDER)
         lines.append("")
         lines.append(
-            "<i>Ningún partido cumple el umbral de edge ≥ 5%. "
-            "Mejor pasar que apostar a ciegas.</i>"
+            "<i>Ningún partido cumple el umbral estándar (edge ≥ 3%), "
+            "pero este es el de mayor edge con EV positivo:</i>"
+        )
+        lines.append("")
+        lines.extend(_pick_block(1, picks[0]))
+    else:
+        lines.append("💤 <b>SIN VALOR HOY — MEJOR PASAR</b>")
+        lines.append(DIVIDER)
+        lines.append("")
+        lines.append(
+            "<i>Ninguna apuesta tiene EV positivo según el modelo. "
+            "Apostar hoy sería tirar dinero. Mañana habrá nuevas "
+            "oportunidades.</i>"
         )
         lines.append("")
 

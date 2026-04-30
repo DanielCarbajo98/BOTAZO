@@ -79,7 +79,7 @@ def test_daily_report_with_value_picks():
 
 def test_daily_report_no_picks_message():
     text = daily_report("30/04/2026", [], [])
-    assert "SIN PICKS" in text
+    assert "SIN VALOR" in text or "MEJOR PASAR" in text
     assert "Audiobet" in text
 
 
