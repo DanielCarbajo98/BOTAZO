@@ -1,20 +1,22 @@
 """Daily 09:00 report.
 
+Builds a list of standalone Telegram messages — one per pick — so each
+pick lands as its own tipster post (matching the published-tipster vibe
+the user asked for). Football only; tennis stays in /tenis on demand.
+
 Pipeline:
 1. List today's fixtures from Supabase.
 2. Run the Phase-3 predictor for each.
-3. If ODDS_API_KEY is set, fetch market odds and de-vig them.
-4. Evaluate every (match, market, outcome) combination — store edges.
-5. Build the report:
-   - All bets with edge >= MIN_EDGE  ->  "Value picks" section.
-   - If none, but the highest-edge candidate has POSITIVE EV ->
-     publish it as "Pick del día (confianza baja)".
-   - If even the best candidate has negative EV -> honest "no value
-     today, better to pass" message.
-6. Persist published picks (offset=0 only) to predictions table.
+3. Fetch market odds (The Odds API), de-vig and evaluate every quote.
+4. Scan empirical patterns (>=8/10 last + >=80% in H2H) — these are the
+   primary picks.
+5. Compute value bets (edge >= MIN_EDGE on de-vigged odds) — secondary.
+6. Emit messages: header + one per pattern pick + value section + closing.
+7. Persist published picks (offset=0 only) to predictions table.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -27,10 +29,8 @@ from src.analyzer.match_context import build_match_context
 from src.analyzer.narrative import build_narrative
 from src.analyzer.pattern_scanner import attach_odds, scan_patterns
 from src.analyzer.predictions import predictions_for_fixtures
-from src.analyzer.tennis_predictions import get_tennis_rater, predict_match as predict_tennis_match
 from src.bot import formatters
 from src.collectors.odds_api import OddsApiCollector
-from src.collectors.tennis_sackmann import player_api_id as tennis_player_api_id
 from src.config import Config
 from src.models.value_detector import (
     MIN_EDGE,
@@ -45,15 +45,8 @@ from src.storage.repository import (
     set_config_value,
 )
 from src.utils.http import RateLimitedClient
-from src.utils.ids import canonical_team_id, stable_int_id
+from src.utils.ids import canonical_team_id
 from src.utils.rate_limiter import DomainRateLimiter
-
-
-def stable_int_id_for_tennis(date_iso: str, p1: str, p2: str) -> int:
-    """Stable id for a tennis match used as fixture_api_id in predictions
-    table. Order-insensitive so p1/p2 swap doesn't desync."""
-    pair = "|".join(sorted([p1.lower(), p2.lower()]))
-    return stable_int_id("tennis_pick", date_iso, pair)
 
 logger = logging.getLogger(__name__)
 
@@ -62,14 +55,7 @@ def _label(fx: dict) -> str:
     return f"{fx.get('home_team_name', '?')} vs {fx.get('away_team_name', '?')}"
 
 
-def _quotes_for_match(
-    odds_records: List[dict],
-    fixture: dict,
-) -> List[MarketQuote]:
-    """Try to find odds for this fixture in three increasingly fuzzy ways.
-
-    Returns the first non-empty match.
-    """
+def _quotes_for_match(odds_records: List[dict], fixture: dict) -> List[MarketQuote]:
     home_id = fixture.get("home_team_api_id")
     away_id = fixture.get("away_team_api_id")
     home_name = fixture.get("home_team_name") or ""
@@ -79,18 +65,15 @@ def _quotes_for_match(
     home_canon = canonical_team_id(home_name) if home_name else None
     away_canon = canonical_team_id(away_name) if away_name else None
 
-    # Pass 1: exact strict-ID match (works when both sources spelled identically)
     for rec in odds_records:
         if rec.get("home_team_api_id") == home_id and rec.get("away_team_api_id") == away_id:
             return rec.get("quotes") or []
 
-    # Pass 2: canonical-ID match (handles "Real Madrid CF" vs "Real Madrid")
     if home_canon is not None and away_canon is not None:
         for rec in odds_records:
             if rec.get("home_team_canon_id") == home_canon and rec.get("away_team_canon_id") == away_canon:
                 return rec.get("quotes") or []
 
-    # Pass 3: same date + canonical home matches anywhere
     if home_canon is not None and fixture_date:
         for rec in odds_records:
             if (
@@ -102,39 +85,68 @@ def _quotes_for_match(
     return []
 
 
-def _persist_picks(picks: List[ValueBet]) -> None:
+def _persist_value_picks(picks: List[ValueBet]) -> None:
     if not picks:
         return
     try:
         from src.storage.supabase_client import get_client
         client = get_client()
         client.table("predictions").insert([p.as_row() for p in picks]).execute()
-        logger.info("Persisted %d picks to predictions table", len(picks))
+        logger.info("Persisted %d value picks", len(picks))
     except Exception:
-        logger.exception("Failed to persist picks (non-fatal)")
+        logger.exception("Failed to persist value picks (non-fatal)")
+
+
+def _persist_pattern_picks(picks: List[dict]) -> None:
+    if not picks:
+        return
+    try:
+        from src.storage.supabase_client import get_client
+        client = get_client()
+        rows = []
+        for p in picks:
+            rows.append(
+                {
+                    "fixture_api_id": p["fixture_api_id"],
+                    "match_label": p["match_label"],
+                    "market": p["market"],
+                    "outcome": p["outcome"],
+                    "model_probability": p["model_probability"],
+                    "market_odds": p["market_odds"],
+                    "implied_probability": p["implied_probability"],
+                    "edge": p["edge"],
+                    "expected_value": p["expected_value"],
+                    "recommended_stake_pct": p["recommended_stake_pct"],
+                    "confidence": p["confidence"],
+                    "reasoning": (
+                        f"Patrón {p.get('pattern_name')} - "
+                        f"strength {p.get('pattern_strength', 0)*100:.0f}% "
+                        f"@ {p['market_odds']:.2f} ({p.get('bookmaker', '?')})"
+                    ),
+                }
+            )
+        client.table("predictions").insert(rows).execute()
+        logger.info("Persisted %d pattern picks", len(rows))
+    except Exception:
+        logger.exception("Failed to persist pattern picks (non-fatal)")
 
 
 def _select_picks(all_candidates: List[ValueBet]) -> tuple[List[ValueBet], Optional[ValueBet]]:
-    """Return (value_picks, fallback_pick).
-
-    value_picks: every candidate with edge >= MIN_EDGE, deduped per market.
-    fallback_pick: the single best candidate when there are no value picks
-      AND its EV is positive — used as 'Pick del día (confianza baja)'.
-    """
     value_picks = best_value_bet_per_market([c for c in all_candidates if c.edge >= MIN_EDGE])
     if value_picks:
         return value_picks, None
-
     if not all_candidates:
         return [], None
-
     best = max(all_candidates, key=lambda c: c.edge)
     if best.expected_value > 0 and best.edge > 0:
         return [], best
     return [], None
 
 
-async def build_daily_report(config: Config, days_offset: int = 0) -> str:
+async def build_daily_report_messages(config: Config, days_offset: int = 0) -> List[str]:
+    """Return a list of standalone messages, in the order they should be
+    sent. Each message is HTML-ready Telegram text.
+    """
     tz = pytz.timezone(config.timezone)
     target_local = (datetime.now(tz) + timedelta(days=days_offset)).date()
     report_date = target_local.strftime("%d/%m/%Y")
@@ -143,6 +155,7 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
     items = predictions_for_fixtures(fixtures)
 
     candidates: List[ValueBet] = []
+    odds_records: List[dict] = []
     if config.odds_api_key and items:
         rate_limiter = DomainRateLimiter(min_interval_seconds=3.0)
         async with RateLimitedClient(rate_limiter=rate_limiter) as client:
@@ -155,7 +168,6 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
 
         total_quotes = 0
         matched_fixtures = 0
-        unmatched_examples: list[str] = []
         for it in items:
             fx = it["fixture"]
             pred = it.get("prediction")
@@ -163,8 +175,6 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
                 continue
             quotes = _quotes_for_match(odds_records, fx)
             if not quotes:
-                if len(unmatched_examples) < 3:
-                    unmatched_examples.append(_label(fx))
                 continue
             matched_fixtures += 1
             total_quotes += len(quotes)
@@ -179,96 +189,17 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
 
         logger.info(
             "Daily report scan: fixtures=%d odds_records=%d matched=%d quotes=%d candidates=%d",
-            len(items),
-            len(odds_records),
-            matched_fixtures,
-            total_quotes,
-            len(candidates),
-        )
-        if unmatched_examples:
-            logger.info("Unmatched fixtures (no odds found): %s", ", ".join(unmatched_examples))
-        if odds_records and matched_fixtures == 0:
-            sample_odds = [(rec.get("home"), rec.get("away")) for rec in odds_records[:5]]
-            logger.warning(
-                "Got %d odds records but ZERO matched. Sample odds names: %s",
-                len(odds_records),
-                sample_odds,
-            )
-
-    # ------------------------------------------------------------------
-    # TENNIS — pull active tournaments from The Odds API, predict via Elo,
-    # evaluate every quote against our model. Use the same de-vig +
-    # value-detector machinery as football for consistent picks.
-    # ------------------------------------------------------------------
-    if config.odds_api_key:
-        rate_limiter = DomainRateLimiter(min_interval_seconds=3.0)
-        async with RateLimitedClient(rate_limiter=rate_limiter) as client:
-            odds = OddsApiCollector(client=client, api_key=config.odds_api_key)
-            try:
-                tennis_records = await odds.fetch_tennis()
-            except Exception:
-                logger.exception("Tennis odds fetch failed; skipping tennis section")
-                tennis_records = []
-
-        target_iso = target_local.isoformat()
-        try:
-            rater = get_tennis_rater()
-        except Exception:
-            logger.exception("Tennis Elo unavailable; skipping tennis predictions")
-            rater = None
-
-        tennis_candidates_count = 0
-        tennis_matched = 0
-        if rater is not None:
-            for rec in tennis_records:
-                if rec.get("kickoff_date") != target_iso:
-                    continue
-                tennis_matched += 1
-                p1 = rec.get("player1_name") or ""
-                p2 = rec.get("player2_name") or ""
-                # Tour is unknown from Odds API; try ATP first, fall back to WTA
-                # (player_api_id() prefixes by tour, so we use the rating that's
-                # populated — pick whichever has more matches played).
-                p1_atp = rater.get(tennis_player_api_id("ATP", p1))
-                p1_wta = rater.get(tennis_player_api_id("WTA", p1))
-                tour = "ATP" if p1_atp.matches >= p1_wta.matches else "WTA"
-                model = predict_tennis_match(tour, p1, p2, surface=None, rater=rater)
-                model_probs = {
-                    "player1_win": model["player1_win"],
-                    "player2_win": model["player2_win"],
-                }
-                fair_quotes = devig_quotes(rec.get("quotes") or [])
-                fixture_api_id_local = stable_int_id_for_tennis(target_iso, p1, p2)
-                bets = evaluate_all_quotes(
-                    fixture_api_id=fixture_api_id_local,
-                    match_label=f"{p1} vs {p2}",
-                    model_probabilities=model_probs,
-                    fair_quotes=fair_quotes,
-                )
-                tennis_candidates_count += len(bets)
-                candidates.extend(bets)
-
-        logger.info(
-            "Tennis scan: records=%d matched=%d candidates=%d",
-            len(tennis_records),
-            tennis_matched,
-            tennis_candidates_count,
+            len(items), len(odds_records), matched_fixtures, total_quotes, len(candidates),
         )
 
-    # ------------------------------------------------------------------
-    # PATTERN PICKS — empirical tipster-style scanning. We compute one
-    # MatchContext per fixture (cached implicitly per call) and run the
-    # scanner. Each detected pattern needs live odds from the records we
-    # already fetched; without odds we don't publish.
-    # ------------------------------------------------------------------
+    # ---------- Pattern scan ----------
     pattern_picks: List[dict] = []
-    if items and config.odds_api_key:
-        pattern_records: List[dict] = []
+    if items and odds_records:
         try:
-            # Reuse the football odds_records fetched above.
+            best_per_key: dict[tuple[int, str, str], object] = {}
             for it in items:
                 fx = it["fixture"]
-                ctx = build_match_context(fx)
+                ctx = build_match_context(fx, n=10, h2h_n=5)
                 detected = scan_patterns(ctx)
                 if not detected:
                     continue
@@ -277,75 +208,31 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
                     enriched = attach_odds(pat, quotes)
                     if enriched is None:
                         continue
-                    pattern_records.append(enriched)
-
-            # Dedup: at most one pattern pick per (fixture, market, outcome).
-            best_per_key: dict[tuple[int, str, str], object] = {}
-            for pp in pattern_records:
-                k = (pp.fixture_api_id, pp.market, pp.outcome)
-                prev = best_per_key.get(k)
-                if prev is None or pp.pattern_strength > prev.pattern_strength:
-                    best_per_key[k] = pp
+                    k = (enriched.fixture_api_id, enriched.market, enriched.outcome)
+                    prev = best_per_key.get(k)
+                    if prev is None or enriched.pattern_strength > prev.pattern_strength:
+                        best_per_key[k] = enriched
 
             ordered = sorted(
                 best_per_key.values(),
-                key=lambda p: (p.pattern_strength, p.decimal_odds or 0),
+                key=lambda p: p.pattern_strength,
                 reverse=True,
             )
-
-            # Build display dicts with narrative bullets directly from
-            # the pattern.
-            for pp in ordered[:5]:
-                d = pp.as_display()
-                fx = next(
-                    (
-                        it["fixture"]
-                        for it in items
-                        if it["fixture"].get("api_id") == pp.fixture_api_id
-                    ),
-                    None,
-                )
-                if fx is not None:
-                    league = fx.get("league_name") or "fútbol"
-                    opening = f"<b>{pp.pattern_name}</b> en {league} — patrón claro."
-                else:
-                    opening = f"<b>{pp.pattern_name}</b> — patrón claro."
-                d["narrative"] = {
-                    "opening": opening,
-                    "bullets": pp.bullets,
-                }
-                pattern_picks.append(d)
-
-            logger.info(
-                "Pattern scan: detected=%d unique=%d published=%d",
-                len(pattern_records),
-                len(best_per_key),
-                len(pattern_picks),
-            )
+            pattern_picks = [pp.as_display() for pp in ordered[:5]]
+            logger.info("Pattern scan: detected=%d unique=%d", len(best_per_key), len(pattern_picks))
         except Exception:
             logger.exception("Pattern scan failed (continuing)")
 
+    # ---------- Value bets ----------
     value_picks, fallback = _select_picks(candidates)
+    display_value: List[ValueBet] = list(value_picks)
+    if not display_value and fallback is not None:
+        display_value = [fallback]
 
-    # Picks for display: value picks first; if none, the fallback (single).
-    display_picks: List[ValueBet] = list(value_picks)
-    if not display_picks and fallback is not None:
-        display_picks = [fallback]
-
-    # Only persist for the canonical 'today' report and only if there is
-    # something to commit to publicly (matches our tracking honesty rule).
-    if days_offset == 0:
-        _persist_picks(display_picks)
-
-    # Build a tipster-style narrative for each displayed football pick.
-    pick_dicts: list[dict] = []
-    for p in display_picks:
+    # Build narratives for value picks
+    value_pick_dicts: list[dict] = []
+    for p in display_value:
         d = p.as_display()
-        # Tennis picks have no fixture row in `fixtures`; skip narrative.
-        if p.market == "H2H":
-            d["narrative"] = None
-            pick_dicts.append(d)
-            continue
         try:
             fx = next(
                 (it["fixture"] for it in items if it["fixture"].get("api_id") == p.fixture_api_id),
@@ -354,46 +241,77 @@ async def build_daily_report(config: Config, days_offset: int = 0) -> str:
             if fx is None:
                 d["narrative"] = None
             else:
-                ctx = build_match_context(fx)
+                ctx = build_match_context(fx, n=10, h2h_n=5)
                 d["narrative"] = build_narrative(ctx, p.market, p.outcome)
         except Exception:
             logger.exception("Narrative build failed for fixture %s", p.fixture_api_id)
             d["narrative"] = None
-        pick_dicts.append(d)
+        value_pick_dicts.append(d)
 
-    message = formatters.daily_report(
-        report_date=report_date,
-        items=items,
-        picks=pick_dicts,
-        is_fallback_pick=(not value_picks and fallback is not None),
-        pattern_picks=pattern_picks,
-    )
-
+    # ---------- Persist (offset=0 only) ----------
     if days_offset == 0:
+        _persist_pattern_picks(pattern_picks)
+        _persist_value_picks(display_value)
         try:
             set_config_value(
                 "last_report",
                 f"date={report_date} fixtures={len(items)} "
-                f"value_picks={len(value_picks)} fallback={'yes' if fallback else 'no'}",
+                f"patterns={len(pattern_picks)} value={len(display_value)}",
             )
         except Exception:
             logger.exception("Could not persist last_report marker (non-fatal)")
 
-    return message
+    # ---------- Build the message list ----------
+    messages: List[str] = []
+
+    # 1. Header — even when nothing to publish, we send the date so the
+    #    channel still has a daily heartbeat.
+    messages.append(formatters.report_header(report_date, len(pattern_picks), len(display_value)))
+
+    # 2. One message per pattern pick.
+    for idx, pp in enumerate(pattern_picks, start=1):
+        messages.append(formatters.pattern_pick_message(idx, pp))
+
+    # 3. Value bets section (only when there are no patterns; otherwise the
+    #    patterns are already the headline).
+    if not pattern_picks and value_pick_dicts:
+        messages.append(
+            formatters.value_picks_message(
+                value_pick_dicts,
+                is_fallback=(not value_picks and fallback is not None),
+            )
+        )
+
+    # 4. Closing message — context + reminder. Always send.
+    messages.append(formatters.report_footer(items, has_picks=bool(pattern_picks or display_value)))
+
+    return messages
+
+
+async def build_daily_report(config: Config, days_offset: int = 0) -> str:
+    """Single-string variant kept for compatibility (used by tests).
+    Concatenates every message with a divider between them.
+    """
+    msgs = await build_daily_report_messages(config, days_offset=days_offset)
+    return "\n\n".join(msgs)
 
 
 async def send_daily_report(config: Optional[Config] = None) -> None:
     cfg = config or Config.from_env()
-    text = await build_daily_report(cfg)
+    messages = await build_daily_report_messages(cfg)
     bot = Bot(token=cfg.telegram_bot_token)
-    try:
-        await bot.send_message(
-            chat_id=cfg.telegram_chat_id,
-            text=text,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
-        )
-        logger.info("Daily report sent to chat_id=%s", cfg.telegram_chat_id)
-    except Exception:
-        logger.exception("Failed to send daily report")
-        raise
+    sent = 0
+    for msg in messages:
+        try:
+            await bot.send_message(
+                chat_id=cfg.telegram_chat_id,
+                text=msg,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+            sent += 1
+            # Telegram caps to ~1 msg/sec per chat; pad a bit.
+            await asyncio.sleep(1.5)
+        except Exception:
+            logger.exception("Failed to send a daily report chunk")
+    logger.info("Daily report: sent %d/%d messages to chat_id=%s", sent, len(messages), cfg.telegram_chat_id)

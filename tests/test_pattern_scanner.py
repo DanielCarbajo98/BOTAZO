@@ -1,12 +1,13 @@
 from src.analyzer.match_context import HeadToHead, MatchContext, TeamForm
 from src.analyzer.pattern_scanner import (
+    LAST_N,
     attach_odds,
     scan_patterns,
 )
 from src.models.value_detector import MarketQuote
 
 
-def _form(goals_for=None, goals_against=None, last_results=None, matches=5):
+def _form(goals_for=None, goals_against=None, last_results=None, matches=LAST_N):
     return TeamForm(
         team_api_id=0,
         matches_considered=matches,
@@ -46,13 +47,22 @@ def _btts_fixture(score_h, score_a, home_id=1, away_id=2):
 
 
 def test_btts_yes_pattern_detected_when_streaks_align():
-    home = _form(goals_for=[2, 1, 1, 2, 1], goals_against=[1, 1, 2, 1, 1])  # 5/5 BTTS
-    away = _form(goals_for=[2, 1, 3, 2, 1], goals_against=[1, 2, 1, 2, 2])  # 5/5 BTTS
+    # 9/10 BTTS for both teams
+    home = _form(
+        goals_for=[2, 1, 1, 2, 1, 2, 1, 1, 2, 0],
+        goals_against=[1, 1, 2, 1, 1, 2, 1, 1, 1, 0],
+    )
+    away = _form(
+        goals_for=[2, 1, 3, 2, 1, 1, 2, 1, 1, 0],
+        goals_against=[1, 2, 1, 2, 2, 1, 1, 2, 1, 0],
+    )
+    # H2H: 4/5 BTTS
     h2h = [
         _btts_fixture(2, 1),
         _btts_fixture(1, 2),
         _btts_fixture(3, 1),
         _btts_fixture(2, 2),
+        _btts_fixture(1, 0),  # not BTTS
     ]
     ctx = _ctx(home, away, h2h)
     picks = scan_patterns(ctx)
@@ -62,9 +72,14 @@ def test_btts_yes_pattern_detected_when_streaks_align():
 
 
 def test_btts_yes_skipped_when_h2h_breaks_pattern():
-    home = _form(goals_for=[2, 1, 1, 2, 1], goals_against=[1, 1, 2, 1, 1])
-    away = _form(goals_for=[2, 1, 3, 2, 1], goals_against=[1, 2, 1, 2, 2])
-    # H2H mostly clean sheets - breaks the pattern
+    home = _form(
+        goals_for=[2, 1, 1, 2, 1, 2, 1, 1, 2, 1],
+        goals_against=[1, 1, 2, 1, 1, 2, 1, 1, 1, 1],
+    )
+    away = _form(
+        goals_for=[2, 1, 3, 2, 1, 1, 2, 1, 1, 1],
+        goals_against=[1, 2, 1, 2, 2, 1, 1, 2, 1, 1],
+    )
     h2h = [
         _btts_fixture(2, 0),
         _btts_fixture(1, 0),
@@ -77,12 +92,20 @@ def test_btts_yes_skipped_when_h2h_breaks_pattern():
 
 
 def test_over_2_5_pattern():
-    home = _form(goals_for=[2, 2, 3, 1, 2], goals_against=[1, 2, 1, 2, 2])  # 5/5 over
-    away = _form(goals_for=[3, 1, 2, 2, 2], goals_against=[1, 2, 2, 1, 1])  # 5/5 over
+    # Make sure totals are >= 3 in 9/10 matches for each team
+    home = _form(
+        goals_for=[2, 2, 3, 1, 2, 2, 3, 1, 2, 0],
+        goals_against=[1, 2, 1, 2, 2, 1, 1, 2, 1, 1],
+    )
+    away = _form(
+        goals_for=[3, 1, 2, 2, 2, 1, 3, 2, 2, 0],
+        goals_against=[1, 2, 2, 1, 1, 2, 1, 1, 2, 1],
+    )
     h2h = [
         _btts_fixture(2, 2),
         _btts_fixture(3, 1),
         _btts_fixture(2, 2),
+        _btts_fixture(3, 0),
     ]
     ctx = _ctx(home, away, h2h)
     picks = scan_patterns(ctx)
@@ -91,22 +114,16 @@ def test_over_2_5_pattern():
 
 
 def test_home_dominant_pattern():
-    # Home wins all 5, away loses 4/5
     home = _form(
-        goals_for=[2, 1, 3, 2, 2],
-        goals_against=[0, 0, 1, 0, 1],
-        last_results=["W", "W", "W", "W", "W"],
+        goals_for=[2, 1, 3, 2, 2, 3, 1, 2, 2, 1],
+        goals_against=[0, 0, 1, 0, 1, 0, 0, 1, 0, 0],
+        last_results=["W", "W", "W", "W", "W", "W", "W", "W", "L", "W"],  # 9W
     )
     away = _form(
-        goals_for=[0, 1, 0, 0, 1],
-        goals_against=[2, 1, 2, 3, 2],
-        last_results=["L", "L", "L", "W", "L"],
+        goals_for=[0, 1, 0, 0, 1, 0, 1, 0, 1, 1],
+        goals_against=[2, 1, 2, 3, 2, 1, 2, 2, 1, 0],
+        last_results=["L", "L", "L", "W", "L", "L", "L", "L", "L", "D"],  # 8L
     )
-    h2h = [
-        _btts_fixture(2, 0, home_id=1, away_id=2),  # home wins
-        _btts_fixture(0, 2, home_id=2, away_id=1),  # at away venue, home wins (away_id is the "Real Madrid" actually)
-    ]
-    # Use simpler H2H: home (id 1) wins both
     h2h = [
         {"home_team_api_id": 1, "away_team_api_id": 2, "score_home": 2, "score_away": 0},
         {"home_team_api_id": 1, "away_team_api_id": 2, "score_home": 3, "score_away": 1},
@@ -119,31 +136,35 @@ def test_home_dominant_pattern():
 
 
 def test_no_pattern_when_inconsistent_form():
-    # Truly mixed: alternating high/low scoring matches break every threshold
     home = _form(
-        goals_for=[3, 0, 2, 1, 0],   # totals: 5,1,4,2,1 -> 2/5 over, 3/5 under, 2/5 BTTS
-        goals_against=[2, 1, 2, 1, 1],
-        last_results=["W", "L", "W", "D", "L"],
+        goals_for=[3, 0, 2, 1, 0, 2, 0, 1, 0, 2],
+        goals_against=[2, 1, 2, 1, 1, 0, 1, 0, 1, 1],
+        last_results=["W", "L", "W", "D", "L", "W", "L", "D", "L", "W"],
     )
     away = _form(
-        goals_for=[2, 0, 1, 1, 0],   # totals: 4,1,2,2,1 -> 1/5 over, 4/5 under, 2/5 BTTS
-        goals_against=[2, 1, 1, 1, 1],
-        last_results=["D", "L", "D", "W", "L"],
+        goals_for=[2, 0, 1, 1, 0, 0, 2, 1, 0, 1],
+        goals_against=[2, 1, 1, 1, 1, 0, 0, 0, 1, 1],
+        last_results=["D", "L", "D", "W", "L", "D", "W", "W", "L", "D"],
     )
     ctx = _ctx(home, away, [])
     picks = scan_patterns(ctx)
-    # No 4/5 streak in any direction for any market
     assert picks == []
 
 
 def test_attach_odds_picks_best_bookmaker_for_outcome():
-    # Build a btts_yes pattern, then ensure attach_odds picks highest odds
-    home = _form(goals_for=[1, 1, 1, 1, 1], goals_against=[1, 1, 1, 1, 1])
-    away = _form(goals_for=[1, 1, 1, 1, 1], goals_against=[1, 1, 1, 1, 1])
+    home = _form(
+        goals_for=[1] * 10,
+        goals_against=[1] * 10,
+    )
+    away = _form(
+        goals_for=[1] * 10,
+        goals_against=[1] * 10,
+    )
     h2h = [
         _btts_fixture(1, 1),
         _btts_fixture(2, 1),
         _btts_fixture(1, 2),
+        _btts_fixture(1, 1),
     ]
     ctx = _ctx(home, away, h2h)
     [pick] = [p for p in scan_patterns(ctx) if p.outcome == "btts_yes"]
@@ -151,7 +172,7 @@ def test_attach_odds_picks_best_bookmaker_for_outcome():
     quotes = [
         MarketQuote("BTTS", "btts_yes", "Bet365", 1.80),
         MarketQuote("BTTS", "btts_no", "Bet365", 2.00),
-        MarketQuote("BTTS", "btts_yes", "Pinnacle", 1.95),  # best
+        MarketQuote("BTTS", "btts_yes", "Pinnacle", 1.95),
         MarketQuote("BTTS", "btts_no", "Pinnacle", 1.85),
     ]
     enriched = attach_odds(pick, quotes)
@@ -162,11 +183,23 @@ def test_attach_odds_picks_best_bookmaker_for_outcome():
 
 
 def test_attach_odds_returns_none_when_market_missing():
-    home = _form(goals_for=[1, 1, 1, 1, 1], goals_against=[1, 1, 1, 1, 1])
-    away = _form(goals_for=[1, 1, 1, 1, 1], goals_against=[1, 1, 1, 1, 1])
-    h2h = [_btts_fixture(1, 1)] * 3
+    home = _form(goals_for=[1] * 10, goals_against=[1] * 10)
+    away = _form(goals_for=[1] * 10, goals_against=[1] * 10)
+    h2h = [_btts_fixture(1, 1)] * 4
     ctx = _ctx(home, away, h2h)
     [pick] = [p for p in scan_patterns(ctx) if p.outcome == "btts_yes"]
-    # Only h2h quotes -> no btts market available
     quotes = [MarketQuote("1X2", "home_win", "X", 2.0)]
     assert attach_odds(pick, quotes) is None
+
+
+def test_pattern_skipped_when_window_too_small():
+    """If a team has fewer than 10 finished matches we can't trust the
+    pattern — don't emit anything."""
+    home = _form(
+        goals_for=[1, 1, 1, 1, 1],   # only 5 matches
+        goals_against=[1, 1, 1, 1, 1],
+        matches=5,
+    )
+    away = _form(goals_for=[1] * 10, goals_against=[1] * 10)
+    ctx = _ctx(home, away, [])
+    assert scan_patterns(ctx) == []

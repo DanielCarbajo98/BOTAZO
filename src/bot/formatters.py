@@ -279,6 +279,115 @@ def _pattern_pick_block(idx: int, p: dict) -> List[str]:
     return lines
 
 
+# ---------------------------------------------------------------------------
+# Daily report — multi-message variant (one Telegram post per pick)
+# ---------------------------------------------------------------------------
+
+
+def report_header(report_date: str, n_patterns: int, n_value: int) -> str:
+    if n_patterns == 0 and n_value == 0:
+        return (
+            f"🎯 <b>Audiobet — {_esc(report_date)}</b>\n\n"
+            "Hoy ningún partido cumple los patrones del modelo y el mercado no "
+            "ofrece value claro. Mejor pasar que apostar a ciegas.\n\n"
+            "<i>Mañana habrá nuevas oportunidades.</i>"
+        )
+    parts = []
+    if n_patterns:
+        parts.append(f"<b>{n_patterns}</b> {'patrón' if n_patterns == 1 else 'patrones'}")
+    if n_value:
+        parts.append(f"<b>{n_value}</b> value bet{'s' if n_value > 1 else ''}")
+    summary = " · ".join(parts) if parts else "sin picks"
+    return (
+        f"🎯 <b>Audiobet — {_esc(report_date)}</b>\n\n"
+        f"📊 Resumen del día: {summary}\n\n"
+        "<i>A continuación, cada pick por separado 👇</i>"
+    )
+
+
+def pattern_pick_message(idx: int, p: dict) -> str:
+    """Standalone Telegram message for a single pattern pick.
+    Layout mimics a published-tipster tweet: title -> hook -> bullets ->
+    pick line -> CTA."""
+    confidence = p.get("confidence", "baja")
+    emoji = _confidence_emoji(confidence)
+    pick_label = _outcome_label(p.get("market", ""), p.get("outcome", ""))
+    book = p.get("bookmaker") or "?"
+    odds = p.get("market_odds") or 0
+    stake = p.get("recommended_stake_pct") or 0
+    pattern_name = p.get("pattern_name") or "Patrón detectado"
+    strength = p.get("pattern_strength", 0) * 100
+    bullets = p.get("bullets") or []
+    opening = p.get("opening") or ""
+    league = p.get("league") or ""
+
+    lines: List[str] = [
+        f"{emoji} <b>PICK #{idx} · {_esc(pattern_name)}</b>",
+        "",
+        f"⚽ <b>{_esc(p.get('match_label', '?'))}</b>",
+    ]
+    if league:
+        lines.append(f"🏆 {_esc(league)}")
+    if opening:
+        lines.append("")
+        lines.append(f"<i>{opening}</i>")
+    if bullets:
+        lines.append("")
+        for b in bullets:
+            lines.append(f"— {b}")
+            lines.append("")  # blank between bullets so they breathe
+    lines.append(
+        f"📌 <b>Apuesta:</b> {_esc(pick_label)} @ <b>{odds:.2f}</b>  ·  🏛️ {_esc(book)}"
+    )
+    lines.append(
+        f"💵 <b>Stake:</b> {stake*100:.2f}% banca  ·  ⭐ Confianza <b>{_esc(confidence)}</b>"
+    )
+    lines.append(f"💪 Fuerza del patrón: <b>{strength:.0f}%</b>")
+    lines.append("")
+    lines.append("<i>¿Te juegas algo o lo dejas pasar? 🤔</i>")
+    return "\n".join(lines)
+
+
+def value_picks_message(picks: List[dict], is_fallback: bool = False) -> str:
+    """One-shot message rendering value bets (used when no patterns)."""
+    if not picks:
+        return "💤 <i>Sin value bets adicionales hoy.</i>"
+
+    lines: List[str] = []
+    if is_fallback:
+        lines.append("⭐ <b>PICK DEL DÍA</b>  ·  <i>confianza baja</i>")
+        lines.append(
+            "<i>Ningún patrón detectado y nada con edge ≥ 3%, "
+            "pero este es el de mayor edge con EV positivo.</i>"
+        )
+    else:
+        lines.append(f"💰 <b>VALUE BETS — {len(picks)}</b>")
+    lines.append("")
+    for idx, p in enumerate(sorted(picks, key=lambda x: x.get("edge", 0), reverse=True), start=1):
+        lines.extend(_pick_block(idx, p))
+    return "\n".join(lines).strip()
+
+
+def report_footer(items: List[dict], has_picks: bool) -> str:
+    if not items:
+        return (
+            "<i>Audiobet detecta valor, no predice el futuro. "
+            "Apuesta con responsabilidad.</i>"
+        )
+    n = len(items)
+    if has_picks:
+        msg = (
+            f"📋 He analizado <b>{n}</b> {'partido' if n == 1 else 'partidos'} hoy. "
+            "Solo publico picks cuando los datos son contundentes."
+        )
+    else:
+        msg = (
+            f"📋 He analizado <b>{n}</b> {'partido' if n == 1 else 'partidos'} hoy "
+            "y ninguno cumple los criterios para apostar."
+        )
+    return msg + "\n\n<i>Audiobet detecta valor, no predice el futuro. Apuesta con responsabilidad.</i>"
+
+
 def _pick_block(idx: int, p: dict) -> List[str]:
     """Tipster-style pick rendering. Layout:
 

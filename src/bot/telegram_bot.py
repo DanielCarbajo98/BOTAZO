@@ -14,7 +14,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from src.analyzer.daily_report import build_daily_report
+from src.analyzer.daily_report import build_daily_report_messages
 from src.analyzer.predictions import predictions_for_fixtures
 from src.analyzer.stats import compute_stats
 from src.analyzer.tennis_predictions import get_tennis_rater, predict_match as predict_tennis_match
@@ -196,8 +196,13 @@ async def informe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"Generando informe de {label} (10-30s si tengo que pedir cuotas)…"
     )
     try:
-        text = await build_daily_report(config, days_offset=offset)
-        await update.message.reply_text(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+        import asyncio
+        messages = await build_daily_report_messages(config, days_offset=offset)
+        for msg in messages:
+            await update.message.reply_text(
+                msg, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+            )
+            await asyncio.sleep(1.0)  # Telegram per-chat rate limit
     except Exception:
         logger.exception("/informe failed")
         await update.message.reply_text(
