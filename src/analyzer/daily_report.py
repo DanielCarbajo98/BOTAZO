@@ -60,12 +60,21 @@ def _persist_picks(picks: List[ValueBet]) -> None:
         logger.exception("Failed to persist picks (non-fatal)")
 
 
-async def build_daily_report(config: Config) -> str:
-    tz = pytz.timezone(config.timezone)
-    today_local = datetime.now(tz).date()
-    report_date = today_local.strftime("%d/%m/%Y")
+async def build_daily_report(config: Config, days_offset: int = 0) -> str:
+    """Build the report for today (offset=0) or any future/past day.
 
-    fixtures = fixtures_on_date(today_local)
+    `days_offset` follows the same convention as /partidos: 0 = today,
+    1 = tomorrow, -1 = yesterday. Picks for non-today reports are NOT
+    persisted to the predictions table — we only track stakes we
+    actually announce to the channel at 09:00.
+    """
+    from datetime import timedelta
+
+    tz = pytz.timezone(config.timezone)
+    target_local = (datetime.now(tz) + timedelta(days=days_offset)).date()
+    report_date = target_local.strftime("%d/%m/%Y")
+
+    fixtures = fixtures_on_date(target_local)
     items = predictions_for_fixtures(fixtures)
 
     picks: List[ValueBet] = []
@@ -100,7 +109,10 @@ async def build_daily_report(config: Config) -> str:
             picks.extend(bets)
 
         picks = best_value_bet_per_market(picks)
-        _persist_picks(picks)
+        # Only persist picks for the canonical 'today' report — those are the
+        # ones we publish to the channel and want to track for ROI later.
+        if days_offset == 0:
+            _persist_picks(picks)
 
     message = formatters.daily_report(
         report_date=report_date,
@@ -108,13 +120,14 @@ async def build_daily_report(config: Config) -> str:
         picks=[p.as_display() for p in picks],
     )
 
-    try:
-        set_config_value(
-            "last_report",
-            f"date={report_date} fixtures={len(items)} picks={len(picks)}",
-        )
-    except Exception:
-        logger.exception("Could not persist last_report marker (non-fatal)")
+    if days_offset == 0:
+        try:
+            set_config_value(
+                "last_report",
+                f"date={report_date} fixtures={len(items)} picks={len(picks)}",
+            )
+        except Exception:
+            logger.exception("Could not persist last_report marker (non-fatal)")
 
     return message
 

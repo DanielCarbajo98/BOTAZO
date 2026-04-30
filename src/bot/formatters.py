@@ -72,7 +72,7 @@ def help_message() -> str:
         "• /hoy — partidos de hoy con predicciones del modelo\n"
         "• /manana — partidos de mañana\n"
         "• /partidos N — partidos dentro de N días (ej. /partidos 3)\n"
-        "• /informe — fuerza el informe diario ahora\n"
+        "• /informe [N] — informe del día (N=0 hoy, 1 mañana, -1 ayer)\n"
         "• /stats — ROI, hit rate, drawdown, mejores ligas/mercados\n"
         "• /help — este mensaje\n"
         "\n"

@@ -111,14 +111,29 @@ async def stats(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def informe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Force the daily report to run on demand. Useful for verification."""
-    logger.info("/informe from chat_id=%s", update.effective_chat.id)
+    """/informe [N] — informe del día. N=0 hoy, N=1 mañana, N=-1 ayer, etc."""
+    logger.info("/informe %s from chat_id=%s", context.args, update.effective_chat.id)
     config: Config = context.application.bot_data.get("config")
+
+    offset = 0
+    if context.args:
+        try:
+            offset = int(context.args[0])
+        except ValueError:
+            await update.message.reply_text(
+                "Uso: /informe N (donde N es 0=hoy, 1=mañana, 2=pasado, …)"
+            )
+            return
+    if not (-7 <= offset <= 14):
+        await update.message.reply_text("Solo acepto rango -7 ≤ N ≤ 14.")
+        return
+
+    label = {0: "hoy", 1: "mañana", -1: "ayer"}.get(offset, f"+{offset} días" if offset > 0 else f"{offset} días")
     await update.message.reply_text(
-        "Generando informe (esto puede tardar 10-30s si tengo que pedir cuotas)…"
+        f"Generando informe de {label} (10-30s si tengo que pedir cuotas)…"
     )
     try:
-        text = await build_daily_report(config)
+        text = await build_daily_report(config, days_offset=offset)
         await update.message.reply_text(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     except Exception:
         logger.exception("/informe failed")
