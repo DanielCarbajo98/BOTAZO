@@ -104,12 +104,27 @@ def _strength_to_confidence(strength: float) -> str:
 
 
 def _scan_btts_yes(ctx: MatchContext) -> Optional[PatternPick]:
+    """AA Sí — strict, complementary.
+
+    Requires BOTH teams to:
+      - score in 9/10 last (proves they create goals)
+      - concede in 9/10 last (proves they leak goals)
+    AND in all 5 H2H both teams scored.
+    """
     if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
 
-    home_btts = ctx.home_form.btts_in_last(LAST_N)
-    away_btts = ctx.away_form.btts_in_last(LAST_N)
-    if home_btts / LAST_N < MIN_FORM_RATE or away_btts / LAST_N < MIN_FORM_RATE:
+    home_scored = ctx.home_form.scored_in_last(LAST_N)
+    home_conceded = ctx.home_form.conceded_in_last(LAST_N)
+    away_scored = ctx.away_form.scored_in_last(LAST_N)
+    away_conceded = ctx.away_form.conceded_in_last(LAST_N)
+
+    if (
+        home_scored / LAST_N < MIN_FORM_RATE
+        or home_conceded / LAST_N < MIN_FORM_RATE
+        or away_scored / LAST_N < MIN_FORM_RATE
+        or away_conceded / LAST_N < MIN_FORM_RATE
+    ):
         return None
 
     h_for = ctx.home_form.avg_goals_for
@@ -122,14 +137,15 @@ def _scan_btts_yes(ctx: MatchContext) -> Optional[PatternPick]:
     league = ctx.fixture.get("league_name") or "fútbol"
 
     bullets = [
-        f"<b>{home}</b> ha visto Ambos Anotan en <b>{home_btts}/{LAST_N}</b> de sus últimos partidos, "
-        f"con un promedio de <b>{h_for:.1f}</b> goles a favor y <b>{h_ag:.1f}</b> en contra.",
-        f"<b>{away}</b> también marca y encaja con regularidad: AA en <b>{away_btts}/{LAST_N}</b>, "
-        f"promedio <b>{a_for:.1f}</b> a favor y <b>{a_ag:.1f}</b> en contra.",
+        f"<b>{home}</b> ha marcado en <b>{home_scored}/{LAST_N}</b> y encajado en "
+        f"<b>{home_conceded}/{LAST_N}</b> de sus últimos partidos. "
+        f"Promedio: <b>{h_for:.1f}</b> a favor, <b>{h_ag:.1f}</b> en contra.",
+        f"<b>{away}</b> ha marcado en <b>{away_scored}/{LAST_N}</b> y encajado en "
+        f"<b>{away_conceded}/{LAST_N}</b> de los suyos. "
+        f"Promedio: <b>{a_for:.1f}</b> a favor, <b>{a_ag:.1f}</b> en contra.",
     ]
 
-    # STRICT H2H GATE: must have at least REQUIRED_H2H past matches
-    # AND every single one of them must confirm the pattern.
+    # STRICT H2H: 5/5 must be BTTS yes (both scored)
     if ctx.h2h.matches < REQUIRED_H2H:
         return None
     h2h_btts = sum(
@@ -137,15 +153,15 @@ def _scan_btts_yes(ctx: MatchContext) -> Optional[PatternPick]:
         for fx in ctx.h2h.fixtures
         if (fx.get("score_home") or 0) > 0 and (fx.get("score_away") or 0) > 0
     )
-    h2h_rate = h2h_btts / ctx.h2h.matches
-    if h2h_rate < MIN_H2H_RATE:
+    if h2h_btts / ctx.h2h.matches < MIN_H2H_RATE:
         return None
     bullets.append(
-        f"En los últimos <b>{ctx.h2h.matches}</b> enfrentamientos directos se ha dado el AA en "
-        f"los <b>{h2h_btts} ({h2h_rate*100:.0f}%)</b> — patrón perfecto."
+        f"En sus últimos <b>{ctx.h2h.matches}</b> H2H, AMBOS marcaron en los <b>{h2h_btts}</b> "
+        f"— ni un solo partido sin AA."
     )
 
-    strength = (home_btts / LAST_N + away_btts / LAST_N + h2h_rate) / 3
+    rate_avg = (home_scored + home_conceded + away_scored + away_conceded) / (4 * LAST_N)
+    strength = (rate_avg + 1.0) / 2  # average of form rate and perfect H2H
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -163,6 +179,11 @@ def _scan_btts_yes(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_btts_no(ctx: MatchContext) -> Optional[PatternPick]:
+    """AA No — strict, complementary.
+
+    Requires BOTH teams to NOT see BTTS in 9/10 last AND in all 5 H2H
+    not have BTTS. Stronger if averages also low.
+    """
     if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     home_no = LAST_N - ctx.home_form.btts_in_last(LAST_N)
@@ -174,21 +195,17 @@ def _scan_btts_no(ctx: MatchContext) -> Optional[PatternPick]:
     away = ctx.fixture.get("away_team_name") or "?"
     league = ctx.fixture.get("league_name") or "fútbol"
 
-    cs_h = ctx.home_form.clean_sheets
-    cs_a = ctx.away_form.clean_sheets
     h_for = ctx.home_form.avg_goals_for
+    h_ag = ctx.home_form.avg_goals_against
     a_for = ctx.away_form.avg_goals_for
+    a_ag = ctx.away_form.avg_goals_against
 
     bullets = [
-        f"<b>{home}</b> mantiene el AA fuera del marcador en <b>{home_no}/{LAST_N}</b> "
-        f"de sus últimos partidos. Solo promedia <b>{h_for:.1f}</b> goles a favor por encuentro.",
-        f"<b>{away}</b> también juega partidos cerrados: NO AA en <b>{away_no}/{LAST_N}</b>, "
-        f"promedio ofensivo bajo de <b>{a_for:.1f}</b> goles.",
+        f"<b>{home}</b> ha cerrado el AA en <b>{home_no}/{LAST_N}</b> partidos: "
+        f"promedio bajo de <b>{h_for:.1f}</b> goles a favor y <b>{h_ag:.1f}</b> en contra.",
+        f"<b>{away}</b> también juega cerrado: NO AA en <b>{away_no}/{LAST_N}</b>, "
+        f"con <b>{a_for:.1f}</b> y <b>{a_ag:.1f}</b> de promedios.",
     ]
-    if cs_h + cs_a >= 6:
-        bullets.append(
-            f"Entre ambos suman <b>{cs_h + cs_a}</b> porterías a cero en los últimos {LAST_N*2} partidos."
-        )
 
     if ctx.h2h.matches < REQUIRED_H2H:
         return None
@@ -197,15 +214,14 @@ def _scan_btts_no(ctx: MatchContext) -> Optional[PatternPick]:
         for fx in ctx.h2h.fixtures
         if (fx.get("score_home") or 0) > 0 and (fx.get("score_away") or 0) > 0
     )
-    h2h_rate = h2h_no / ctx.h2h.matches
-    if h2h_rate < MIN_H2H_RATE:
+    if h2h_no / ctx.h2h.matches < MIN_H2H_RATE:
         return None
     bullets.append(
-        f"En los últimos <b>{ctx.h2h.matches}</b> H2H, NO se dio el AA ni una sola vez "
-        f"<b>({h2h_no}/{ctx.h2h.matches})</b>."
+        f"En los últimos <b>{ctx.h2h.matches}</b> H2H, NO se dio el AA "
+        f"<b>ni una sola vez</b>."
     )
 
-    strength = (home_no / LAST_N + away_no / LAST_N + h2h_rate) / 3
+    strength = (home_no / LAST_N + away_no / LAST_N + 1.0) / 3
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -223,11 +239,31 @@ def _scan_btts_no(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_over_2_5(ctx: MatchContext) -> Optional[PatternPick]:
+    """+2.5 — strict, complementary.
+
+    Requires BOTH teams to:
+      - score in 9/10 last (offensive force)
+      - concede in 9/10 last (defense leaks)
+      - see 9/10 over 2.5
+    AND in all 5 H2H over 2.5.
+    """
     if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     home_over = ctx.home_form.over_2_5_in_last(LAST_N)
     away_over = ctx.away_form.over_2_5_in_last(LAST_N)
-    if home_over / LAST_N < MIN_FORM_RATE or away_over / LAST_N < MIN_FORM_RATE:
+    home_scored = ctx.home_form.scored_in_last(LAST_N)
+    home_conceded = ctx.home_form.conceded_in_last(LAST_N)
+    away_scored = ctx.away_form.scored_in_last(LAST_N)
+    away_conceded = ctx.away_form.conceded_in_last(LAST_N)
+
+    if (
+        home_over / LAST_N < MIN_FORM_RATE
+        or away_over / LAST_N < MIN_FORM_RATE
+        or home_scored / LAST_N < MIN_FORM_RATE
+        or away_scored / LAST_N < MIN_FORM_RATE
+        or home_conceded / LAST_N < MIN_FORM_RATE
+        or away_conceded / LAST_N < MIN_FORM_RATE
+    ):
         return None
 
     home = ctx.fixture.get("home_team_name") or "?"
@@ -236,14 +272,14 @@ def _scan_over_2_5(ctx: MatchContext) -> Optional[PatternPick]:
 
     h_total = ctx.home_form.avg_goals_for + ctx.home_form.avg_goals_against
     a_total = ctx.away_form.avg_goals_for + ctx.away_form.avg_goals_against
-    combined_avg = (h_total + a_total) / 2
+    combined = (h_total + a_total) / 2
 
     bullets = [
-        f"<b>{home}</b> ha visto +2.5 goles en <b>{home_over}/{LAST_N}</b> de sus últimos partidos, "
-        f"con una media combinada de <b>{h_total:.1f}</b> goles por encuentro.",
-        f"<b>{away}</b> también firma partidos abiertos: +2.5 en <b>{away_over}/{LAST_N}</b>, "
-        f"media de <b>{a_total:.1f}</b> goles por partido.",
-        f"Promedio combinado entre ambos: <b>{combined_avg:.1f} goles</b> por partido en sus últimos {LAST_N}.",
+        f"<b>{home}</b> firma <b>{home_over}/{LAST_N}</b> partidos con +2.5 goles, "
+        f"con un combinado de <b>{h_total:.1f}</b> goles por encuentro.",
+        f"<b>{away}</b> también ataca y se le ataca: <b>{away_over}/{LAST_N}</b> con +2.5, "
+        f"combinado de <b>{a_total:.1f}</b> goles por partido.",
+        f"Los dos marcan y encajan: combinado entre ambos de <b>{combined:.1f}</b> goles por partido.",
     ]
 
     if ctx.h2h.matches < REQUIRED_H2H:
@@ -253,15 +289,13 @@ def _scan_over_2_5(ctx: MatchContext) -> Optional[PatternPick]:
         for fx in ctx.h2h.fixtures
         if ((fx.get("score_home") or 0) + (fx.get("score_away") or 0)) >= 3
     )
-    h2h_rate = h2h_over / ctx.h2h.matches
-    if h2h_rate < MIN_H2H_RATE:
+    if h2h_over / ctx.h2h.matches < MIN_H2H_RATE:
         return None
     bullets.append(
-        f"En los últimos <b>{ctx.h2h.matches}</b> H2H se ha superado el +2.5 goles en "
-        f"<b>{h2h_over}/{ctx.h2h.matches}</b> — siempre."
+        f"En los últimos <b>{ctx.h2h.matches}</b> H2H, los <b>{h2h_over}</b> superaron 2.5 goles."
     )
 
-    strength = (home_over / LAST_N + away_over / LAST_N + h2h_rate) / 3
+    strength = (home_over / LAST_N + away_over / LAST_N + 1.0) / 3
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -279,6 +313,13 @@ def _scan_over_2_5(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_under_2_5(ctx: MatchContext) -> Optional[PatternPick]:
+    """−2.5 — strict, complementary.
+
+    Requires BOTH teams to:
+      - see 9/10 under 2.5
+      - have low combined averages (defense + low offense)
+    AND in all 5 H2H under 2.5.
+    """
     if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     home_under = LAST_N - ctx.home_form.over_2_5_in_last(LAST_N)
@@ -286,24 +327,26 @@ def _scan_under_2_5(ctx: MatchContext) -> Optional[PatternPick]:
     if home_under / LAST_N < MIN_FORM_RATE or away_under / LAST_N < MIN_FORM_RATE:
         return None
 
+    # Complementary check: at least one of (offense weak) or (defense strong) for each team.
+    h_for = ctx.home_form.avg_goals_for
+    h_ag = ctx.home_form.avg_goals_against
+    a_for = ctx.away_form.avg_goals_for
+    a_ag = ctx.away_form.avg_goals_against
+    if (h_for + h_ag) > 2.5 or (a_for + a_ag) > 2.5:
+        return None
+
     home = ctx.fixture.get("home_team_name") or "?"
     away = ctx.fixture.get("away_team_name") or "?"
     league = ctx.fixture.get("league_name") or "fútbol"
 
-    h_total = ctx.home_form.avg_goals_for + ctx.home_form.avg_goals_against
-    a_total = ctx.away_form.avg_goals_for + ctx.away_form.avg_goals_against
-
     bullets = [
-        f"<b>{home}</b>: −2.5 goles en <b>{home_under}/{LAST_N}</b> últimos partidos. "
-        f"Media combinada de solo <b>{h_total:.1f}</b> goles por encuentro.",
-        f"<b>{away}</b> también disputa partidos cerrados: −2.5 en <b>{away_under}/{LAST_N}</b>, "
-        f"media de <b>{a_total:.1f}</b> goles por partido.",
+        f"<b>{home}</b>: −2.5 goles en <b>{home_under}/{LAST_N}</b>. "
+        f"Promedio bajo: <b>{h_for:.1f}</b> a favor, <b>{h_ag:.1f}</b> en contra.",
+        f"<b>{away}</b>: −2.5 en <b>{away_under}/{LAST_N}</b>. "
+        f"Promedio: <b>{a_for:.1f}</b> a favor, <b>{a_ag:.1f}</b> en contra.",
+        f"Ambas defensas aprietan: encajan <b>{h_ag:.1f}</b> y <b>{a_ag:.1f}</b> "
+        f"goles por partido respectivamente.",
     ]
-    if ctx.home_form.avg_goals_against + ctx.away_form.avg_goals_against <= 2.0:
-        bullets.append(
-            f"Defensas sólidas: encajan <b>{ctx.home_form.avg_goals_against:.1f}</b> y "
-            f"<b>{ctx.away_form.avg_goals_against:.1f}</b> goles por partido respectivamente."
-        )
 
     if ctx.h2h.matches < REQUIRED_H2H:
         return None
@@ -312,15 +355,14 @@ def _scan_under_2_5(ctx: MatchContext) -> Optional[PatternPick]:
         for fx in ctx.h2h.fixtures
         if ((fx.get("score_home") or 0) + (fx.get("score_away") or 0)) >= 3
     )
-    h2h_rate = h2h_under / ctx.h2h.matches
-    if h2h_rate < MIN_H2H_RATE:
+    if h2h_under / ctx.h2h.matches < MIN_H2H_RATE:
         return None
     bullets.append(
-        f"En los últimos <b>{ctx.h2h.matches}</b> H2H, los <b>{h2h_under}/{ctx.h2h.matches}</b> "
-        f"quedaron por debajo de 2.5 goles — patrón perfecto."
+        f"En los últimos <b>{ctx.h2h.matches}</b> H2H, los <b>{h2h_under}</b> "
+        f"quedaron por debajo de 2.5 goles."
     )
 
-    strength = (home_under / LAST_N + away_under / LAST_N + h2h_rate) / 3
+    strength = (home_under / LAST_N + away_under / LAST_N + 1.0) / 3
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -338,13 +380,29 @@ def _scan_under_2_5(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_home_dominant(ctx: MatchContext) -> Optional[PatternPick]:
+    """Local imparable — strict, complementary.
+
+    Requires:
+      - Home wins 9/10 last
+      - Home scored in 9/10 last (offense fires)
+      - Away losses 8/10 last
+      - Away conceded in 9/10 last (defense leaks)
+      - 5/5 H2H home wins
+    """
     if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     home_wins = ctx.home_form.wins_in_last(LAST_N)
     away_losses = ctx.away_form.losses_in_last(LAST_N)
+    home_scored = ctx.home_form.scored_in_last(LAST_N)
+    away_conceded = ctx.away_form.conceded_in_last(LAST_N)
+
     if home_wins / LAST_N < MIN_FORM_RATE:
         return None
-    if away_losses / LAST_N < 0.5:
+    if home_scored / LAST_N < MIN_FORM_RATE:   # complementary: home actually scores
+        return None
+    if away_losses / LAST_N < 0.8:             # away losing form too
+        return None
+    if away_conceded / LAST_N < MIN_FORM_RATE: # complementary: away actually concedes
         return None
 
     home = ctx.fixture.get("home_team_name") or "?"
@@ -357,24 +415,27 @@ def _scan_home_dominant(ctx: MatchContext) -> Optional[PatternPick]:
     a_ag = ctx.away_form.avg_goals_against
 
     bullets = [
-        f"<b>{home}</b> llega imparable con <b>{home_wins} victorias en sus últimos {LAST_N} partidos</b>, "
-        f"anotando <b>{h_for:.1f}</b> goles por encuentro y encajando solo <b>{h_ag:.1f}</b>.",
-        f"<b>{away}</b> arrastra una mala racha con <b>{away_losses} derrotas en sus últimos {LAST_N}</b>, "
-        f"con apenas <b>{a_for:.1f}</b> goles a favor y <b>{a_ag:.1f}</b> en contra de media.",
+        f"<b>{home}</b> imparable: <b>{home_wins}/{LAST_N}</b> victorias, "
+        f"marcando en <b>{home_scored}/{LAST_N}</b> "
+        f"(<b>{h_for:.1f}</b> goles a favor, <b>{h_ag:.1f}</b> en contra).",
+        f"<b>{away}</b> en horas bajas: <b>{away_losses}/{LAST_N}</b> derrotas, "
+        f"encajando en <b>{away_conceded}/{LAST_N}</b> "
+        f"(<b>{a_for:.1f}</b> goles a favor, <b>{a_ag:.1f}</b> en contra).",
     ]
+
     if ctx.h2h.matches < REQUIRED_H2H:
         return None
     home_id = ctx.fixture.get("home_team_api_id") or 0
     h2h_home_wins = ctx.h2h.team_won_count(home_id)
-    h2h_rate = h2h_home_wins / ctx.h2h.matches
-    if h2h_rate < MIN_H2H_RATE:
+    if h2h_home_wins / ctx.h2h.matches < MIN_H2H_RATE:
         return None
     bullets.append(
         f"Histórico H2H demoledor: <b>{home}</b> ha ganado los <b>{h2h_home_wins}/{ctx.h2h.matches}</b> "
         f"últimos enfrentamientos directos."
     )
 
-    strength = min(1.0, 0.5 * (home_wins / LAST_N) + 0.3 * (away_losses / LAST_N) + 0.2 * h2h_rate)
+    strength = min(1.0, 0.4 * (home_wins / LAST_N) + 0.2 * (home_scored / LAST_N)
+                   + 0.15 * (away_losses / LAST_N) + 0.15 * (away_conceded / LAST_N) + 0.1)
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
@@ -392,13 +453,21 @@ def _scan_home_dominant(ctx: MatchContext) -> Optional[PatternPick]:
 
 
 def _scan_away_dominant(ctx: MatchContext) -> Optional[PatternPick]:
+    """Visitante imparable — strict, complementary. Mirror of home_dominant."""
     if ctx.home_form.matches_considered < LAST_N or ctx.away_form.matches_considered < LAST_N:
         return None
     away_wins = ctx.away_form.wins_in_last(LAST_N)
     home_losses = ctx.home_form.losses_in_last(LAST_N)
+    away_scored = ctx.away_form.scored_in_last(LAST_N)
+    home_conceded = ctx.home_form.conceded_in_last(LAST_N)
+
     if away_wins / LAST_N < MIN_FORM_RATE:
         return None
-    if home_losses / LAST_N < 0.5:
+    if away_scored / LAST_N < MIN_FORM_RATE:
+        return None
+    if home_losses / LAST_N < 0.8:
+        return None
+    if home_conceded / LAST_N < MIN_FORM_RATE:
         return None
 
     home = ctx.fixture.get("home_team_name") or "?"
@@ -411,24 +480,27 @@ def _scan_away_dominant(ctx: MatchContext) -> Optional[PatternPick]:
     a_ag = ctx.away_form.avg_goals_against
 
     bullets = [
-        f"<b>{away}</b> llega lanzado: <b>{away_wins} victorias en sus últimos {LAST_N} partidos</b>, "
-        f"anotando <b>{a_for:.1f}</b> goles por encuentro y encajando <b>{a_ag:.1f}</b>.",
-        f"<b>{home}</b> arrastra una mala racha en casa: <b>{home_losses} derrotas en sus últimos {LAST_N}</b>, "
-        f"con <b>{h_for:.1f}</b> goles a favor y <b>{h_ag:.1f}</b> en contra de media.",
+        f"<b>{away}</b> lanzado: <b>{away_wins}/{LAST_N}</b> victorias, "
+        f"marcando en <b>{away_scored}/{LAST_N}</b> "
+        f"(<b>{a_for:.1f}</b> goles a favor, <b>{a_ag:.1f}</b> en contra).",
+        f"<b>{home}</b> floja en casa: <b>{home_losses}/{LAST_N}</b> derrotas, "
+        f"encajando en <b>{home_conceded}/{LAST_N}</b> "
+        f"(<b>{h_for:.1f}</b> goles a favor, <b>{h_ag:.1f}</b> en contra).",
     ]
+
     if ctx.h2h.matches < REQUIRED_H2H:
         return None
     away_id = ctx.fixture.get("away_team_api_id") or 0
     h2h_away_wins = ctx.h2h.team_won_count(away_id)
-    h2h_rate = h2h_away_wins / ctx.h2h.matches
-    if h2h_rate < MIN_H2H_RATE:
+    if h2h_away_wins / ctx.h2h.matches < MIN_H2H_RATE:
         return None
     bullets.append(
         f"Histórico H2H demoledor: <b>{away}</b> ha ganado los <b>{h2h_away_wins}/{ctx.h2h.matches}</b> "
         f"últimos enfrentamientos directos."
     )
 
-    strength = min(1.0, 0.5 * (away_wins / LAST_N) + 0.3 * (home_losses / LAST_N) + 0.2 * h2h_rate)
+    strength = min(1.0, 0.4 * (away_wins / LAST_N) + 0.2 * (away_scored / LAST_N)
+                   + 0.15 * (home_losses / LAST_N) + 0.15 * (home_conceded / LAST_N) + 0.1)
     return PatternPick(
         fixture_api_id=ctx.fixture.get("api_id") or 0,
         match_label=f"{home} vs {away}",
