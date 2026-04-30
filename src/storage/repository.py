@@ -81,6 +81,78 @@ def fixtures_recent_by_team(team_api_id: int, limit: int = 15) -> List[dict]:
     return res.data or []
 
 
+def all_finished_fixtures() -> List[dict]:
+    """Stream every finished fixture for Elo seeding. Paged to bypass the
+    default Supabase row limit (1000)."""
+    client = get_client()
+    page_size = 1000
+    out: List[dict] = []
+    offset = 0
+    while True:
+        res = (
+            client.table("fixtures")
+            .select("api_id,date,home_team_api_id,away_team_api_id,score_home,score_away,status")
+            .eq("status", "finished")
+            .order("date", desc=False)
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+        rows = res.data or []
+        out.extend(rows)
+        if len(rows) < page_size:
+            break
+        offset += page_size
+    return out
+
+
+def find_team_by_name(name_substring: str) -> List[dict]:
+    """Case-insensitive partial name match. Used by the manual predictor CLI."""
+    client = get_client()
+    res = (
+        client.table("teams")
+        .select("api_id,name,league_name")
+        .ilike("name", f"%{name_substring}%")
+        .limit(20)
+        .execute()
+    )
+    return res.data or []
+
+
+def fixture_stats_for_fixtures(fixture_api_ids: List[int]) -> dict:
+    """Return a dict {fixture_api_id: stats_row}."""
+    if not fixture_api_ids:
+        return {}
+    client = get_client()
+    out: dict = {}
+    chunk = 200
+    for i in range(0, len(fixture_api_ids), chunk):
+        batch = fixture_api_ids[i : i + chunk]
+        res = (
+            client.table("fixture_stats")
+            .select("*")
+            .in_("fixture_api_id", batch)
+            .execute()
+        )
+        for row in res.data or []:
+            out[row["fixture_api_id"]] = row
+    return out
+
+
+def fixtures_in_window(start_iso: str, end_iso: str, league_ids: Optional[List[int]] = None) -> List[dict]:
+    client = get_client()
+    q = (
+        client.table("fixtures")
+        .select("*")
+        .gte("date", start_iso)
+        .lte("date", end_iso)
+        .order("date", desc=False)
+    )
+    if league_ids:
+        q = q.in_("league_id", league_ids)
+    res = q.execute()
+    return res.data or []
+
+
 def get_config_value(key: str) -> Optional[str]:
     client = get_client()
     res = client.table("bot_config").select("value").eq("key", key).limit(1).execute()

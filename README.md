@@ -4,10 +4,10 @@ Bot de Telegram que cada mañana envía un análisis de los partidos del día co
 detección de **value bets** (apuestas con valor esperado positivo) sobre
 fútbol.
 
-> Estado actual: **Fase 2** — bot Telegram funcional, scrapers de FBref y
-> Understat operativos, refresh nocturno a las 02:00, comando `/hoy` listando
-> partidos reales del día. Modelo de probabilidades y detector de valor
-> llegarán en Fases 3-4.
+> Estado actual: **Fase 3** — modelo de probabilidades operativo
+> (Dixon-Coles Poisson + xG ajustado de últimos 10 partidos + Elo dinámico
+> con ventaja local). Detector de valor y reporte diario real llegarán en
+> Fase 4.
 
 ## Stack
 
@@ -173,11 +173,28 @@ PYTHONPATH=. python scripts/refresh_now.py
 
 Lee de FBref (fixtures + scores) y Understat (xG) y hace upsert en Supabase.
 
+## Probar el modelo manualmente
+
+Una vez tengas datos cargados (Fase 2 + refresh ejecutado), prueba cualquier
+emparejamiento con:
+
+```bash
+PYTHONPATH=. python scripts/predict.py "Real Madrid" "Real Sociedad"
+```
+
+El script hace match parcial por nombre, pulla últimos 10 partidos de cada
+equipo, replay de Elo sobre todos los finalizados de la temporada y devuelve:
+
+- Expected goals (λ) home/away
+- Probabilidades 1X2
+- Over/Under 2.5
+- BTTS
+
 ## Roadmap
 
 - **Fase 1 — Infraestructura básica** ✅
-- **Fase 2 — Collectors FBref + Understat** ✅
-- Fase 3 — Modelo Poisson + xG + Elo
+- **Fase 2 — Collectors football-data + Understat** ✅
+- **Fase 3 — Modelo Poisson + xG + Elo** ✅
 - Fase 4 — Cuotas + value detector + reporte diario real
 - Fase 5 — Stats individuales + tracking de picks resueltas
 
