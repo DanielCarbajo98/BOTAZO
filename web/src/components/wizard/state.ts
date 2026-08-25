@@ -68,6 +68,7 @@ export type WizardState = {
     phone: string;
     channel: ContactChannel;
     bestTime: string;
+    priority: boolean;
     marketingOptIn: boolean;
     privacyAccepted: boolean;
   };
@@ -114,6 +115,7 @@ export function initialState(presetDestination?: string): WizardState {
       phone: '',
       channel: 'whatsapp',
       bestTime: '',
+      priority: false,
       marketingOptIn: false,
       privacyAccepted: false,
     },
@@ -185,6 +187,7 @@ export function toBrief(state: WizardState): Brief {
       ...(state.contact.phone ? { phone: state.contact.phone.trim() } : {}),
       channel: state.contact.channel,
       ...(state.contact.bestTime ? { bestTime: state.contact.bestTime } : {}),
+      priority: state.contact.priority,
       marketingOptIn: state.contact.marketingOptIn,
       privacyAccepted: true,
     },

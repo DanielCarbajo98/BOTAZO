@@ -26,7 +26,7 @@ export const differentiators: Differentiator[] = [
     emoji: '🧾',
     title: 'Ves el desglose completo',
     description:
-      'Cuánto cuesta el vuelo, cuánto el hotel, cuánto el traslado y cuánto cobramos nosotros. Línea por línea. Puedes comprobar cada precio tú mismo.',
+      'Cuánto cuesta el vuelo, cuánto el hotel, cuánto el traslado y cuánto cobramos nosotros. Línea por línea, y marcando qué reservas nos pagan comisión. Puedes comprobar cada precio tú mismo.',
     versus: 'El precio cerrado de siempre, donde no sabes qué parte es comisión.',
   },
   {
@@ -42,7 +42,7 @@ export const differentiators: Differentiator[] = [
     emoji: '📡',
     title: 'Radar de precios después de reservar',
     description:
-      'Seguimos vigilando tu vuelo y tu hotel. Si baja y la reserva admite cambio o cancelación gratuita, lo rehacemos y te devolvemos la diferencia.',
+      'Seguimos vigilando tu vuelo y tu hotel. Si baja y la reserva admite cambio gratuito, la rehacemos: tres cuartas partes del ahorro son para ti. Si no baja, vigilarlo no te cuesta nada.',
     versus: 'Una vez cobrada la reserva, nadie vuelve a mirar el precio.',
   },
   {

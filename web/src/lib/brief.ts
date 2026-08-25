@@ -297,6 +297,8 @@ export const briefSchema = z
         .optional(),
       channel: z.enum(['whatsapp', 'email', 'phone']).default('whatsapp'),
       bestTime: z.string().trim().max(80).optional(),
+      /** Servicio prioritario de pago: respuesta rápida y más rondas de cambios. */
+      priority: z.boolean().default(false),
       marketingOptIn: z.boolean().default(false),
       privacyAccepted: z.literal(true, { message: 'Necesitamos tu consentimiento para tratar tus datos' }),
     }),

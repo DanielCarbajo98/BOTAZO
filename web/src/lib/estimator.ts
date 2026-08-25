@@ -338,37 +338,44 @@ export function estimate(brief: Brief): Estimate {
   };
 }
 
+/** Decide si un viaje va por tarifa de escapada o de gran viaje. */
+export function resolveFeeTier(brief: Brief): typeof pricing.escapada | typeof pricing.granViaje {
+  const { band } = resolveBaseline(brief);
+  const nights = nightsFromBrief(brief.dates);
+  const isBigTrip =
+    band === 'largo' || band === 'ultralargo' || nights > 6 || brief.trip.destinations.length > 1;
+  return isBigTrip ? pricing.granViaje : pricing.escapada;
+}
+
 /**
  * Tarifa de gestión. Fija, visible y por persona: es el único ingreso de la
  * agencia sobre el viaje, en lugar de una comisión escondida en el precio.
+ *
+ * El mínimo por reserva es lo que hace sostenible el modelo: buscar para una
+ * persona cuesta prácticamente lo mismo que buscar para cuatro, y cada reserva
+ * cerrada carga además con los presupuestos que no salieron adelante.
  */
 export function calculateFee(brief: Brief): number {
   const people = travelerCount(brief.travelers);
-  const nights = nightsFromBrief(brief.dates);
-  const { band } = resolveBaseline(brief);
+  const tier = resolveFeeTier(brief);
 
-  const isBigTrip =
-    band === 'largo' ||
-    band === 'ultralargo' ||
-    nights > 6 ||
-    brief.trip.destinations.length > 1;
-
-  const tier = isBigTrip ? pricing.granViaje : pricing.escapada;
-
-  const payingTravelers =
-    people.adults + brief.travelers.childrenAges.filter((age) => age >= pricing.freeFeeUnderAge).length;
-
-  let perPerson = tier.feePerPerson;
+  let perPerson: number = tier.feePerPerson;
   if (people.billable >= pricing.grupoMinSize) {
     perPerson = perPerson * (1 - pricing.grupoDiscount);
   }
 
-  return Math.min(pricing.feeCap, Math.round(perPerson * Math.max(1, payingTravelers)));
+  // Los niños pequeños pagan la mitad; los bebés en brazos, nada.
+  const payingUnits =
+    people.adults +
+    brief.travelers.childrenAges.reduce(
+      (sum, age) => sum + (age < pricing.childAgeLimit ? pricing.childDiscount : 1),
+      0,
+    );
+
+  const raw = perPerson * Math.max(1, payingUnits);
+  return Math.min(pricing.feeCap, Math.round(Math.max(raw, tier.minPerBooking)));
 }
 
 export function feeTierLabel(brief: Brief): string {
-  const { band } = resolveBaseline(brief);
-  const nights = nightsFromBrief(brief.dates);
-  const isBigTrip = band === 'largo' || band === 'ultralargo' || nights > 6 || brief.trip.destinations.length > 1;
-  return isBigTrip ? pricing.granViaje.label : pricing.escapada.label;
+  return resolveFeeTier(brief).label;
 }

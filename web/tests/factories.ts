@@ -31,6 +31,7 @@ export function makeBrief(overrides: Partial<Brief> = {}): Brief {
       name: 'Ana',
       email: 'ana@example.com',
       channel: 'email',
+      priority: false,
       marketingOptIn: false,
       privacyAccepted: true,
     },

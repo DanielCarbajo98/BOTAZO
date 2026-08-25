@@ -58,6 +58,8 @@ valor por defecto inseguro; **en producción el arranque falla si no lo defines*
 | `npm run typecheck` | TypeScript en modo estricto |
 | `npm run db:seed -- email "Nombre" "contraseña"` | Alta de usuario del backoffice |
 | `npm run admin:hash -- "contraseña"` | Hash scrypt suelto |
+| `npm run analiza:precios` | Modelo de rentabilidad de la tarifa actual |
+| `npm run check:csp` | Verifica que los scripts servidos llevan el nonce correcto (con el servidor levantado) |
 
 ---
 
@@ -107,6 +109,31 @@ con datos reales conforme la agencia cierre presupuestos.
   el propio script, así que **sin JavaScript se ve todo**; con
   `prefers-reduced-motion` se desactiva entero.
 
+### El modelo de precio
+La tarifa no es un número puesto a ojo. `scripts/rentabilidad.ts` calcula el
+euro por hora real de cada perfil de cliente usando el `calculateFee` de la
+propia aplicación, así que **si cambias las tarifas en `src/config/site.ts` y
+vuelves a ejecutarlo, ves al momento el efecto**:
+
+```bash
+npm run analiza:precios
+npm run analiza:precios -- --conversion 0.45 --horas 120 --gastos 450
+```
+
+Lo que sostiene el cálculo es que **cada reserva cerrada arrastra el trabajo de
+los presupuestos que no se cerraron**: con una conversión del 33 %, cada venta
+lleva detrás tres búsquedas completas. De ahí salen las dos decisiones que hacen
+viable el modelo:
+
+- **Mínimo por reserva** (49 € escapada / 99 € gran viaje): buscar para una
+  persona cuesta lo mismo que buscar para cuatro.
+- **Menores a mitad de tarifa en lugar de gratis**: las familias son el perfil
+  más rentable y también el que más trabajo da (habitaciones familiares, tarifas
+  de niño, horarios).
+
+Ajusta `CONVERSION`, las horas por presupuesto y los pesos de cada perfil con
+tus datos reales en cuanto tengas los primeros meses cerrados.
+
 ### La base de datos
 SQLite mediante `better-sqlite3`, con migraciones versionadas en `src/lib/db.ts`.
 Sobra para miles de solicitudes y no añade dependencias externas. Para pasar a
@@ -119,6 +146,11 @@ no sabe qué motor hay debajo.
 
 - **CSP estricta con nonce** por petición (`src/app/proxy.ts`), más HSTS,
   `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` y `Permissions-Policy`.
+  Como el nonce cambia en cada petición, **todo el sitio se renderiza en
+  servidor** (`export const dynamic = 'force-dynamic'` en el layout raíz): una
+  página prerenderizada llevaría un nonce caducado y el navegador bloquearía
+  todos los scripts, dejándola sin JavaScript sin avisar. `npm run check:csp`
+  vigila que eso no vuelva a pasar.
 - **Validación en servidor con Zod** en todas las entradas; el formulario nunca
   es la única barrera.
 - **Antispam**: honeypot + tiempo mínimo de cumplimentación + límite por IP

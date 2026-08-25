@@ -9,7 +9,7 @@ import { BriefSummary } from '@/components/quote/BriefSummary';
 import { nightsFromBrief } from '@/lib/brief';
 import { calculateFee } from '@/lib/estimator';
 import { repo, STATUS_META } from '@/lib/repository';
-import { site } from '@/config/site';
+import { pricing, site } from '@/config/site';
 import { eur, formatDateTime, relativeTime } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Detalle de solicitud', robots: { index: false, follow: false } };
@@ -89,6 +89,7 @@ export default async function SolicitudDetalle({ params }: { params: Promise<{ i
                   ['Teléfono', request.contact_phone ?? '—'],
                   ['Canal preferido', request.contact_channel],
                   ['Mejor momento', request.brief.contact.bestTime ?? '—'],
+                  ['Prioritario', request.brief.contact.priority ? `Sí · ${eur(pricing.priority.fee)}` : 'No'],
                   ['Comercial', request.brief.contact.marketingOptIn ? 'Acepta' : 'No acepta'],
                 ] as [string, string][]
               ).map(([label, value]) => (

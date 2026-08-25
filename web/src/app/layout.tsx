@@ -52,6 +52,17 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
+/**
+ * Todo el sitio se renderiza en cada petición.
+ *
+ * No es un capricho: la CSP lleva un nonce distinto por petición, y una página
+ * prerenderizada en tiempo de compilación llevaría cosido un nonce que ya no
+ * coincide, así que el navegador bloquearía todos los scripts de Next y la
+ * página se quedaría sin JavaScript. Renderizar en servidor cuesta unos pocos
+ * milisegundos por página; quedarse sin hidratar cuesta la web entera.
+ */
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   themeColor: '#0b1220',
   width: 'device-width',

@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:seed": "tsx scripts/seed.ts",
-    "admin:hash": "tsx scripts/hash-password.ts"
+    "admin:hash": "tsx scripts/hash-password.ts",
+    "analiza:precios": "tsx scripts/rentabilidad.ts",
+    "check:csp": "node scripts/check-csp.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

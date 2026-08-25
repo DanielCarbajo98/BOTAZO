@@ -15,6 +15,7 @@ import {
 import { regions, vibes } from '@/lib/catalog';
 import { datesSummary, destinationSummary, travelersSummary } from '@/lib/summary';
 import { toBrief, type StepId, type WizardState } from '@/components/wizard/state';
+import { pricing } from '@/config/site';
 import { eur } from '@/lib/utils';
 
 const labelOf = <T extends { id: string; label: string }>(list: T[], id: string) =>
@@ -125,6 +126,7 @@ export function Resumen({ state, goTo }: { state: WizardState; goTo: (step: Step
         ['Email', state.contact.email || '—'],
         ...(state.contact.phone ? ([['Teléfono', state.contact.phone]] as [string, string][]) : []),
         ['Canal preferido', labelOf(contactChannels, state.contact.channel)],
+        ['Respuesta prioritaria', state.contact.priority ? `Sí (${eur(pricing.priority.fee)})` : 'No'],
       ],
     },
   ];

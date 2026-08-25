@@ -47,21 +47,39 @@ export const site = {
 } as const;
 
 /**
- * Modelo de precio. Cobramos una tarifa fija y visible por persona en lugar de
- * una comisión oculta metida dentro del precio del viaje.
+ * Modelo de precio.
+ *
+ * Cobramos una tarifa fija y visible por persona en lugar de una comisión
+ * oculta metida dentro del precio del viaje.
+ *
+ * Las cifras salen de un cálculo de rentabilidad real: cada reserva cerrada
+ * arrastra el trabajo de los presupuestos que no se cerraron (a una conversión
+ * del ~33 %, son unas 3 búsquedas por cada venta). Por eso hay un mínimo por
+ * reserva: una pareja y una persona sola dan el mismo trabajo, y por debajo de
+ * ese suelo la búsqueda sale a pérdida.
  */
 export const pricing = {
   /** Escapadas: Europa / Norte de África, hasta 6 noches. */
-  escapada: { id: 'escapada', label: 'Escapada', feePerPerson: 19 },
+  escapada: { id: 'escapada', label: 'Escapada', feePerPerson: 29, minPerBooking: 49 },
   /** Larga distancia, multidestino o más de 6 noches. */
-  granViaje: { id: 'gran-viaje', label: 'Gran viaje', feePerPerson: 39 },
+  granViaje: { id: 'gran-viaje', label: 'Gran viaje', feePerPerson: 59, minPerBooking: 99 },
   /** Grupos a partir de 8 personas: tarifa por persona reducida. */
   grupoMinSize: 8,
   grupoDiscount: 0.35,
   /** Máximo que cobramos por reserva, por muy grande que sea el grupo. */
-  feeCap: 249,
-  /** Niños menores de esta edad no pagan tarifa de gestión. */
-  freeFeeUnderAge: 12,
+  feeCap: 349,
+  /** Menores de esta edad pagan la mitad. Los bebés en brazos no pagan nada. */
+  childAgeLimit: 12,
+  childDiscount: 0.5,
+  /** Extra opcional: respuesta en 4 h y más rondas de cambios. */
+  priority: { fee: 39, hours: 4, revisions: 3 },
+  /**
+   * Si después de reservar el precio baja y rehacemos la reserva, el ahorro se
+   * reparte. Solo ganamos si el cliente gana.
+   */
+  savingShare: { client: 0.75, agency: 0.25 },
+  /** Comisión máxima que algunos proveedores nos pagan. No la paga el cliente. */
+  supplierCommissionMax: 7,
   guarantee:
     'Si no conseguimos bajar el mejor precio que encuentres tú por tu cuenta, no pagas la tarifa.',
 } as const;

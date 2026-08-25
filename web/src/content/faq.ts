@@ -23,7 +23,19 @@ export const faqs: FaqItem[] = [
     group: 'Precio',
     question: '¿Cómo ganáis dinero si decís que sois más baratos?',
     answer:
-      'Con una tarifa fija por persona que ves en el presupuesto, separada del precio del viaje. No metemos comisión dentro del vuelo ni del hotel. Ganamos cuando te ahorramos más de lo que cobramos; por eso podemos permitirnos la garantía de "si no ahorras, no pagas".',
+      'De tres sitios, y no hay un cuarto. Uno: la tarifa fija por persona que ves en el presupuesto, en una línea aparte. Dos: la comisión que algunos hoteles, seguros y empresas de actividades nos pagan por traerles la reserva, que sale de su margen y no de tu bolsillo. Y tres: si después de reservar el precio baja y rehacemos la reserva, nos quedamos una cuarta parte de ese ahorro. Nada de eso encarece tu viaje, y todo aparece detallado en el presupuesto.',
+  },
+  {
+    group: 'Precio',
+    question: 'Si os pagan comisión los hoteles, ¿me vais a colocar el que más os pague?',
+    answer:
+      'No, y puedes comprobarlo: en el presupuesto marcamos qué reservas nos generan comisión y cuáles no. Como nuestra tarifa es fija y no un porcentaje, venderte algo más caro no nos hace ganar más. Si el mejor hotel para ti es uno que no nos paga nada, es el que te vamos a recomendar.',
+  },
+  {
+    group: 'Precio',
+    question: '¿Por qué hay un mínimo por reserva?',
+    answer:
+      'Porque buscar para una persona cuesta prácticamente lo mismo que buscar para cuatro: los mismos aeropuertos, el mismo calendario, las mismas comparaciones. El mínimo es lo que hace que podamos seguir dedicándole horas reales a cada presupuesto en lugar de despacharlo en diez minutos.',
   },
   {
     group: 'Precio',
@@ -71,6 +83,6 @@ export const faqs: FaqItem[] = [
     group: 'El viaje',
     question: '¿Y si el precio baja después de reservar?',
     answer:
-      'Seguimos vigilándolo. Si la reserva permite cambio o cancelación gratuita y encontramos algo mejor, la rehacemos y el ahorro es tuyo. Cuando la tarifa no admite cambios te lo decimos de antemano.',
+      'Seguimos vigilándolo. Si la reserva permite cambio o cancelación gratuita y encontramos algo mejor, la rehacemos: el 75 % de ese ahorro es para ti y el 25 % para nosotros. Si no encontramos nada mejor, vigilarlo no te cuesta nada. Cuando la tarifa no admite cambios te lo decimos de antemano.',
   },
 ];

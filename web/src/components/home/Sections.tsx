@@ -285,8 +285,8 @@ export function PricingTeaser() {
     <Section tone="white" id="precios">
       <SectionHeading
         eyebrow="Precio transparente"
-        title="Una tarifa fija por persona. Nada más."
-        description="No cobramos comisión sobre el viaje, así que no ganamos más por venderte algo más caro."
+        title="Una tarifa fija, en una línea aparte"
+        description="No va escondida dentro del precio del viaje. La ves, la comparas y decides. Y si no te ahorramos dinero, no la pagas."
       />
       <div data-reveal-stagger className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
         {[pricing.escapada, pricing.granViaje].map((tier, index) => (
@@ -300,6 +300,9 @@ export function PricingTeaser() {
             <p className="mt-5 font-display text-4xl font-semibold text-ink-900">
               {eur(tier.feePerPerson)}
               <span className="ml-1 font-sans text-base font-normal text-ink-500">/ persona</span>
+            </p>
+            <p className="mt-1.5 text-sm text-ink-500">
+              Mínimo {eur(tier.minPerBooking)} por reserva · menores de {pricing.childAgeLimit} años, mitad de tarifa
             </p>
             <ul className="mt-5 space-y-2.5 text-sm text-ink-600">
               {[
@@ -323,8 +326,12 @@ export function PricingTeaser() {
       <div data-reveal className="mx-auto mt-8 max-w-4xl rounded-card border-2 border-dashed border-brand-300 bg-brand-50/60 p-6 text-center">
         <p className="font-display text-xl font-semibold text-brand-900">{pricing.guarantee}</p>
         <p className="mt-2 text-sm text-ink-600">
-          Menores de {pricing.freeFeeUnderAge} años no pagan tarifa · grupos de {pricing.grupoMinSize} o más,{' '}
+          Bebés en brazos, gratis · grupos de {pricing.grupoMinSize} o más,{' '}
           {Math.round(pricing.grupoDiscount * 100)} % de descuento · máximo {eur(pricing.feeCap)} por reserva.
+        </p>
+        <p className="mx-auto mt-4 max-w-2xl border-t border-brand-200 pt-4 text-sm leading-relaxed text-ink-600">
+          Una pareja a Roma paga {eur(58)}. Una familia de cuatro, {eur(87)}. Si te ahorramos {eur(200)}, la cuenta
+          sale sola; si no, no cobramos.
         </p>
         <ButtonLink href="/precios" variant="outline" size="sm" className="mt-5">
           Ver el detalle de precios

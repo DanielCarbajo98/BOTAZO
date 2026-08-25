@@ -24,9 +24,18 @@ export default function CondicionesPage() {
 
       <h2>3. Tarifa de gestión</h2>
       <ul>
-        <li>Escapada: {eur(pricing.escapada.feePerPerson)} por persona.</li>
-        <li>Gran viaje: {eur(pricing.granViaje.feePerPerson)} por persona.</li>
-        <li>Menores de {pricing.freeFeeUnderAge} años: exentos.</li>
+        <li>
+          Escapada (Europa y Norte de África, hasta 6 noches): {eur(pricing.escapada.feePerPerson)} por persona, con
+          un mínimo de {eur(pricing.escapada.minPerBooking)} por reserva.
+        </li>
+        <li>
+          Gran viaje (larga distancia, multidestino o más de 6 noches): {eur(pricing.granViaje.feePerPerson)} por
+          persona, con un mínimo de {eur(pricing.granViaje.minPerBooking)} por reserva.
+        </li>
+        <li>
+          Menores de {pricing.childAgeLimit} años: {Math.round(pricing.childDiscount * 100)} % de la tarifa. Bebés
+          que viajan en brazos: exentos.
+        </li>
         <li>
           Grupos de {pricing.grupoMinSize} o más personas: {Math.round(pricing.grupoDiscount * 100)} % de descuento
           sobre la tarifa por persona.
@@ -35,6 +44,33 @@ export default function CondicionesPage() {
       </ul>
       <p>
         La tarifa se devenga en el momento de confirmar la reserva y aparece siempre desglosada en el presupuesto.
+        El mínimo por reserva responde a que el trabajo de búsqueda es prácticamente el mismo con independencia del
+        número de viajeros.
+      </p>
+
+      <h3>3.1. Servicio prioritario (opcional)</h3>
+      <p>
+        Por {eur(pricing.priority.fee)} adicionales enviamos el presupuesto en un plazo de{' '}
+        {pricing.priority.hours} horas laborables y ampliamos a {pricing.priority.revisions} las rondas de cambios
+        incluidas. Se abona al solicitarlo y se descuenta íntegramente de la tarifa de gestión si la reserva se
+        confirma. Si no llegamos a ese plazo por causa nuestra, se devuelve.
+      </p>
+
+      <h3>3.2. Comisiones de proveedores</h3>
+      <p>
+        Determinados proveedores (alojamientos, aseguradoras, empresas de actividades y de alquiler de vehículos)
+        nos abonan una comisión de hasta el {pricing.supplierCommissionMax} % por intermediar la reserva. Esa
+        comisión la paga el proveedor con cargo a su propio margen y <strong>no incrementa el precio</strong> que
+        abonas: es el mismo que obtendrías contratando directamente. En cada presupuesto se indica qué servicios
+        nos generan comisión, y esta no condiciona en ningún caso nuestra recomendación.
+      </p>
+
+      <h3>3.3. Reparto del ahorro posterior</h3>
+      <p>
+        Si tras confirmar la reserva el precio baja y la tarifa contratada admite cambio o cancelación sin coste,
+        rehacemos la reserva. Del ahorro obtenido, el {Math.round(pricing.savingShare.client * 100)} % corresponde
+        al cliente y el {Math.round(pricing.savingShare.agency * 100)} % a la agencia en concepto de honorarios de
+        éxito. Si no se consigue ningún ahorro, este seguimiento no tiene coste alguno.
       </p>
 
       <h2>4. Garantía de ahorro</h2>

@@ -17,6 +17,7 @@ import {
   stopsOptions,
 } from '@/lib/brief';
 import { originAirports, regions, suggestDestinations, vibes } from '@/lib/catalog';
+import { pricing, site } from '@/config/site';
 import { Badge } from '@/components/ui/Badge';
 import { ChoiceCard, Chip, Counter, FieldError, Help, Input, Label, Select, Textarea } from '@/components/ui/Field';
 import { cn } from '@/lib/utils';
@@ -987,6 +988,18 @@ export function ContactoStep({ state, set, errors }: StepProps) {
             </Chip>
           ))}
         </div>
+      </Group>
+
+      <Group
+        legend="¿Tienes prisa?"
+        hint={`Solo si sales pronto o persigues una tarifa que se agota. Si no, el presupuesto normal te llega igual de bien y es gratis.`}
+      >
+        <Toggle
+          checked={contact.priority}
+          onChange={(value) => set('contact', { priority: value })}
+          label={`Quiero respuesta prioritaria (${pricing.priority.fee} €)`}
+          description={`Presupuesto en ${pricing.priority.hours} horas en lugar de ${site.contact.responseTimeHours}, y hasta ${pricing.priority.revisions} rondas de cambios. Se descuenta de la tarifa si acabas reservando, y si no cumplimos el plazo te lo devolvemos.`}
+        />
       </Group>
 
       <Group legend="Permisos" error={errors.privacyAccepted}>

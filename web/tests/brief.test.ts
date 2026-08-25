@@ -57,6 +57,7 @@ describe('briefSchema', () => {
           name: 'Ana',
           email: 'ana@example.com',
           channel: 'whatsapp',
+          priority: false,
           marketingOptIn: false,
           privacyAccepted: true,
         },
@@ -72,6 +73,7 @@ describe('briefSchema', () => {
           name: 'Ana',
           email: 'ana@example.com',
           channel: 'email',
+          priority: false,
           marketingOptIn: false,
           // @ts-expect-error comprobamos justo el caso que el tipo prohíbe
           privacyAccepted: false,
@@ -88,12 +90,18 @@ describe('briefSchema', () => {
           name: 'Ana',
           email: 'no-es-un-email',
           channel: 'email',
+          priority: false,
           marketingOptIn: false,
           privacyAccepted: true,
         },
       }),
     );
     expect(result.success).toBe(false);
+  });
+
+  it('el servicio prioritario viene desactivado si no se pide', () => {
+    const result = parse(makeBrief());
+    expect(result.data?.contact.priority).toBe(false);
   });
 
   it('recorta los espacios del nombre y del destino', () => {

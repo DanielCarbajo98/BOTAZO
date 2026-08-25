@@ -104,16 +104,66 @@ describe('calculateFee', () => {
     expect(fee).toBe(pricing.granViaje.feePerPerson * 2);
   });
 
-  it('no cobra tarifa por los niños pequeños', () => {
-    const withKid = calculateFee(
-      makeBrief({ travelers: { adults: 2, childrenAges: [4], infants: 0, rooms: 1 } }),
+  it('cobra más por un viaje de más de 6 noches aunque sea cerca', () => {
+    const largo = calculateFee(
+      makeBrief({ dates: { mode: 'cheapest', nights: 10, months: [] } }),
     );
-    expect(withKid).toBe(pricing.escapada.feePerPerson * 2);
+    expect(largo).toBe(pricing.granViaje.feePerPerson * 2);
+  });
+
+  it('respeta el mínimo por reserva de quien viaja solo', () => {
+    const solo = calculateFee(makeBrief({ travelers: { adults: 1, childrenAges: [], infants: 0, rooms: 1 } }));
+    // Una persona sola da el mismo trabajo que una pareja: por eso hay suelo.
+    expect(solo).toBe(pricing.escapada.minPerBooking);
+    expect(solo).toBeGreaterThan(pricing.escapada.feePerPerson);
+  });
+
+  it('aplica también el mínimo en gran viaje', () => {
+    const solo = calculateFee(
+      makeBrief({
+        trip: { destinationMode: 'known', destinations: ['Tailandia'], regions: [], vibes: [] },
+        travelers: { adults: 1, childrenAges: [], infants: 0, rooms: 1 },
+      }),
+    );
+    expect(solo).toBe(pricing.granViaje.minPerBooking);
+  });
+
+  it('cobra media tarifa por los niños pequeños', () => {
+    const withKid = calculateFee(makeBrief({ travelers: { adults: 2, childrenAges: [4], infants: 0, rooms: 1 } }));
+    expect(withKid).toBe(Math.round(pricing.escapada.feePerPerson * 2.5));
+  });
+
+  it('cobra tarifa completa a partir de la edad límite', () => {
+    const teen = calculateFee(
+      makeBrief({ travelers: { adults: 2, childrenAges: [pricing.childAgeLimit], infants: 0, rooms: 2 } }),
+    );
+    expect(teen).toBe(pricing.escapada.feePerPerson * 3);
+  });
+
+  it('no cobra nada por los bebés en brazos', () => {
+    const conBebe = calculateFee(makeBrief({ travelers: { adults: 2, childrenAges: [], infants: 2, rooms: 1 } }));
+    expect(conBebe).toBe(calculateFee(makeBrief()));
   });
 
   it('descuenta en grupos grandes y respeta el tope', () => {
     const group = calculateFee(makeBrief({ travelers: { adults: 12, childrenAges: [], infants: 0, rooms: 6 } }));
     expect(group).toBeLessThan(pricing.escapada.feePerPerson * 12);
     expect(group).toBeLessThanOrEqual(pricing.feeCap);
+
+    const huge = calculateFee(makeBrief({ travelers: { adults: 20, childrenAges: [], infants: 0, rooms: 10 } }));
+    expect(huge).toBe(pricing.feeCap);
+  });
+
+  it('nunca baja del mínimo ni supera el tope, sea cual sea el grupo', () => {
+    for (let adults = 1; adults <= 20; adults += 1) {
+      const fee = calculateFee(makeBrief({ travelers: { adults, childrenAges: [], infants: 0, rooms: 1 } }));
+      expect(fee).toBeGreaterThanOrEqual(pricing.escapada.minPerBooking);
+      expect(fee).toBeLessThanOrEqual(pricing.feeCap);
+    }
+  });
+
+  it('la tarifa entra en el total estimado', () => {
+    const brief = makeBrief();
+    expect(estimate(brief).breakdown.fee).toBe(calculateFee(brief));
   });
 });

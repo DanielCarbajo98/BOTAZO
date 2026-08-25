@@ -83,9 +83,9 @@ export function Hero() {
 /** Maqueta del presupuesto que recibe el cliente: enseña el producto sin explicarlo. */
 function QuoteMock() {
   const options = [
-    { name: 'Mínima', price: 268, note: '1 escala · hostel céntrico', tone: 'text-ink-500' },
-    { name: 'Equilibrada', price: 341, note: 'Directo · hotel 3★ centro', tone: 'text-ink-500', recommended: true },
-    { name: 'Cómoda', price: 489, note: 'Directo · hotel 4★ + traslados', tone: 'text-ink-500' },
+    { name: 'Mínima', price: 278, note: '1 escala · hostel céntrico', tone: 'text-ink-500' },
+    { name: 'Equilibrada', price: 351, note: 'Directo · hotel 3★ centro', tone: 'text-ink-500', recommended: true },
+    { name: 'Cómoda', price: 499, note: 'Directo · hotel 4★ + traslados', tone: 'text-ink-500' },
   ];
 
   return (
