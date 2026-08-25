@@ -10,7 +10,7 @@ import { isSafeUrl } from '@/lib/quote';
  *
  * El destino viaja **firmado** dentro del propio enlace. Sin firma esto sería
  * un redirector abierto de libro: cualquiera podría montar
- * `alisio.es/ir/?url=sitio-malicioso` y usar nuestro dominio de tapadera.
+ * `zarpea.es/ir/?url=sitio-malicioso` y usar nuestro dominio de tapadera.
  */
 export type LinkPayload = {
   /** URL de destino. */

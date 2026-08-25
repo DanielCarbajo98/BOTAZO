@@ -98,7 +98,7 @@ function QuoteMock() {
 
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">{quoteNounCapitalized} AL-7K3QP9</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">{quoteNounCapitalized} ZP-7K3QP9</p>
             <p className="mt-1 font-display text-xl font-semibold">Roma · 4 noches · 2 personas</p>
           </div>
           <span className="rounded-xl bg-coral-50 px-2.5 py-1.5 text-center">

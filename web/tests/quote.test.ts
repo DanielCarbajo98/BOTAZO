@@ -152,7 +152,7 @@ describe('muro de pago', () => {
       ],
       baggage: 'Cabina 10 kg',
       bookingNote: 'Reservar en la web de Iberia',
-      bookingUrl: 'https://www.iberia.com/?aff=alisio',
+      bookingUrl: 'https://www.iberia.com/?aff=zarpea',
       bookingWhere: 'Iberia',
       commission: true,
     }),

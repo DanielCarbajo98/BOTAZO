@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         // Las áreas privadas y las de acceso por token no deben indexarse.
-        disallow: ['/admin', '/admin/', '/api/', '/ir/', '/presupuesto/AL-', '/seguimiento'],
+        disallow: ['/admin', '/admin/', '/api/', '/ir/', '/presupuesto/ZP-', '/seguimiento'],
       },
     ],
     sitemap: `${site.url}/sitemap.xml`,

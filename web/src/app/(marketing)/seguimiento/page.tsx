@@ -17,7 +17,7 @@ export default function SeguimientoPage() {
         <h1 className="mt-2 text-3xl md:text-4xl">Recupera tu presupuesto</h1>
         <p className="mt-3 leading-relaxed text-ink-600">
           Introduce el número de referencia que te dimos al enviar la solicitud (tiene esta forma:{' '}
-          <span className="font-mono font-semibold">AL-7K3QP9</span>) y el email con el que la creaste.
+          <span className="font-mono font-semibold">ZP-7K3QP9</span>) y el email con el que la creaste.
         </p>
 
         <div className="mt-8 rounded-card border border-ink-100 bg-white p-6 shadow-soft">

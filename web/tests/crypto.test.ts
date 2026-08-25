@@ -50,7 +50,7 @@ describe('utilidades', () => {
   it('las referencias no usan caracteres ambiguos', () => {
     for (let i = 0; i < 200; i += 1) {
       const reference = newReference();
-      expect(reference).toMatch(/^AL-[2-9A-HJ-NP-Z]{6}$/);
+      expect(reference).toMatch(/^ZP-[2-9A-HJ-NP-Z]{6}$/);
     }
   });
 

@@ -24,7 +24,7 @@ preguntas de criba:
 **Acuse de recibo por WhatsApp en menos de 15 minutos.** Es lo más rentable del
 día: sube la conversión, que es la variable que más manda en el euro por hora.
 
-> Hola Ana, soy Dani de Alisio. Ya tengo tu solicitud AL-7K3QP9 para Roma. Me
+> Hola Ana, soy Dani de Zarpea. Ya tengo tu solicitud ZP-7K3QP9 para Roma. Me
 > pongo con ella y te escribo mañana antes de las 14 h.
 
 Pasa a **En estudio**.

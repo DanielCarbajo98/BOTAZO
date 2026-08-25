@@ -22,7 +22,7 @@ const create = () => {
 describe('solicitudes', () => {
   it('crea una solicitud con referencia y token de acceso', () => {
     const { request, accessToken } = create();
-    expect(request.reference).toMatch(/^AL-/);
+    expect(request.reference).toMatch(/^ZP-/);
     expect(request.status).toBe('nueva');
     expect(accessToken.length).toBeGreaterThan(20);
     expect(request.travelers).toBe(2);
@@ -44,7 +44,7 @@ describe('solicitudes', () => {
     const { request, accessToken } = create();
     expect(repo.verifyAccess(request.reference, accessToken)?.id).toBe(request.id);
     expect(repo.verifyAccess(request.reference, 'token-falso')).toBeNull();
-    expect(repo.verifyAccess('AL-NOEXIST', accessToken)).toBeNull();
+    expect(repo.verifyAccess('ZP-NOEXIST', accessToken)).toBeNull();
   });
 
   it('busca por referencia sin distinguir mayúsculas', () => {

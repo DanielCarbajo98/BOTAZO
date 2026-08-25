@@ -6,20 +6,20 @@
  */
 
 export const site = {
-  name: 'Alisio',
-  legalName: 'Alisio (nombre comercial pendiente de constitución)',
+  name: 'Zarpea',
+  legalName: 'Zarpea (nombre comercial pendiente de constitución)',
   /** De dónde viene el nombre: se usa en el pie y en la pantalla de carga. */
   story:
-    'Los alisios son los vientos constantes que cruzaban el Atlántico y empujaban a los barcos sin gastar ni un remo. Eso hacemos: buscamos la corriente que te lleva más lejos por menos.',
+    'Zarpar es soltar amarras y salir. Sin esperar al momento perfecto, sin pedir permiso y sin dejarte medio sueldo en el intento. De eso va esto.',
   tagline: 'Viaja con el viento a favor',
   description:
     'Agencia de viajes low cost. Nos cuentas a dónde quieres ir (o ni eso) y te buscamos vuelos, hotel, traslados y actividades al mejor precio real. Presupuesto gratis en 24 h y sin compromiso.',
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://alisio.es',
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zarpea.es',
   locale: 'es-ES',
   currency: 'EUR',
 
   contact: {
-    email: 'hola@alisio.es',
+    email: 'hola@zarpea.es',
     // Formato internacional sin espacios para los enlaces wa.me / tel:
     phoneE164: '+34600000000',
     phoneDisplay: '+34 600 00 00 00',
@@ -37,7 +37,7 @@ export const site = {
     // Título-licencia de agencia de viajes de la comunidad autónoma.
     travelAgencyLicence: 'PENDIENTE (código CICMA / registro autonómico)',
     insurer: 'PENDIENTE',
-    dpoEmail: 'privacidad@alisio.es',
+    dpoEmail: 'privacidad@zarpea.es',
   },
 
   social: {

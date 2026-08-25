@@ -1,6 +1,6 @@
-# Alisio · agencia de viajes low cost
+# Zarpea · agencia de viajes low cost
 
-> *Los alisios son los vientos constantes que cruzaban el Atlántico y empujaban
+> *Los zarpeas son los vientos constantes que cruzaban el Atlántico y empujaban
 > a los barcos sin gastar ni un remo.*
 
 > **La web arranca en modo asesor** (sin licencia de agencia). Ver
@@ -273,7 +273,7 @@ no sabe qué motor hay debajo.
 Necesita **runtime Node.js** (no edge) y **disco persistente** para SQLite.
 
 - **Railway / Fly.io / VPS**: monta un volumen y apunta `DATABASE_PATH` a él
-  (p. ej. `/data/alisio.db`).
+  (p. ej. `/data/zarpea.db`).
 - **Vercel**: el sistema de archivos es efímero, así que ahí habría que cambiar
   el repositorio a Postgres antes de desplegar.
 

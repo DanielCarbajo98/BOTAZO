@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { sign, verify, verifyPassword } from '@/lib/crypto';
 import { repo, type AdminUser } from '@/lib/repository';
 
-const COOKIE_NAME = 'alisio_session';
+const COOKIE_NAME = 'zarpea_session';
 const TTL_SECONDS = 60 * 60 * 8; // 8 horas de jornada
 
 export type Session = { sub: string; email: string; name: string; role: string };

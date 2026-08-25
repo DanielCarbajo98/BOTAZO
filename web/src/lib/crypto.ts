@@ -14,8 +14,8 @@ export function newId(): string {
   return randomUUID();
 }
 
-/** Referencia legible del tipo AL-7K3QP9 */
-export function newReference(prefix = 'AL'): string {
+/** Referencia legible del tipo ZP-7K3QP9 */
+export function newReference(prefix = 'ZP'): string {
   const bytes = randomBytes(6);
   let out = '';
   for (const byte of bytes) {

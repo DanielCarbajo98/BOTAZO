@@ -14,16 +14,16 @@ export default function CookiesPage() {
       <h2>Qué guardamos exactamente</h2>
       <ul>
         <li>
-          <strong>Borrador del formulario</strong> (<code>alisio-wizard-v1</code>, almacenamiento local del navegador):
+          <strong>Borrador del formulario</strong> (<code>zarpea-wizard-v1</code>, almacenamiento local del navegador):
           conserva lo que llevas escrito para que no lo pierdas si cierras la página. No se envía a ningún servidor
           hasta que pulsas Enviar. Se borra solo a los 30 días, o cuando envías la solicitud.
         </li>
         <li>
-          <strong>Aviso de cookies</strong> (<code>alisio-cookies-v1</code>, almacenamiento local): recuerda que ya has
+          <strong>Aviso de cookies</strong> (<code>zarpea-cookies-v1</code>, almacenamiento local): recuerda que ya has
           visto este aviso.
         </li>
         <li>
-          <strong>Sesión del área de gestión</strong> (<code>alisio_session</code>, cookie): solo se crea si eres parte
+          <strong>Sesión del área de gestión</strong> (<code>zarpea_session</code>, cookie): solo se crea si eres parte
           del equipo y accedes al backoffice. Es una cookie técnica, firmada, con caducidad de 8 horas.
         </li>
       </ul>
