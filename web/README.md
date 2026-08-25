@@ -1,4 +1,7 @@
-# Viajalisto · agencia de viajes low cost
+# Alisio · agencia de viajes low cost
+
+> *Los alisios son los vientos constantes que cruzaban el Atlántico y empujaban
+> a los barcos sin gastar ni un remo.*
 
 Web completa para una agencia de viajes que trabaja por **presupuesto a medida**:
 el cliente cuenta su viaje en un formulario guiado, un agente busca de verdad, y
@@ -93,6 +96,17 @@ para el agente, y así se le presenta al usuario en todas partes.
 Todos los coeficientes viven en el objeto `factors`, listos para recalibrarse
 con datos reales conforme la agencia cierre presupuestos.
 
+### Movimiento
+- **Intro de marca** (`src/components/site/BrandLoader.tsx`): globo girando con el
+  avión del logo en órbita. Se retira sola en cuanto la página está lista, con un
+  mínimo en pantalla para que no parpadee, y la CSS la esconde a los 2 s como red
+  de seguridad por si el JavaScript fallara. Solo sale en cargas completas: al
+  navegar entre secciones no se repite.
+- **Aparición al hacer scroll** (`src/components/site/ScrollReveal.tsx`): las
+  secciones entran con un desplazamiento suave. La clase que las oculta la pone
+  el propio script, así que **sin JavaScript se ve todo**; con
+  `prefers-reduced-motion` se desactiva entero.
+
 ### La base de datos
 SQLite mediante `better-sqlite3`, con migraciones versionadas en `src/lib/db.ts`.
 Sobra para miles de solicitudes y no añade dependencias externas. Para pasar a
@@ -141,7 +155,7 @@ no sabe qué motor hay debajo.
 Necesita **runtime Node.js** (no edge) y **disco persistente** para SQLite.
 
 - **Railway / Fly.io / VPS**: monta un volumen y apunta `DATABASE_PATH` a él
-  (p. ej. `/data/viajalisto.db`).
+  (p. ej. `/data/alisio.db`).
 - **Vercel**: el sistema de archivos es efímero, así que ahí habría que cambiar
   el repositorio a Postgres antes de desplegar.
 

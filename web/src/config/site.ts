@@ -6,17 +6,20 @@
  */
 
 export const site = {
-  name: 'Viajalisto',
-  legalName: 'Viajalisto (nombre comercial pendiente de constitución)',
-  tagline: 'Viaja como si tuvieras un amigo experto en chollos',
+  name: 'Alisio',
+  legalName: 'Alisio (nombre comercial pendiente de constitución)',
+  /** De dónde viene el nombre: se usa en el pie y en la pantalla de carga. */
+  story:
+    'Los alisios son los vientos constantes que cruzaban el Atlántico y empujaban a los barcos sin gastar ni un remo. Eso hacemos: buscamos la corriente que te lleva más lejos por menos.',
+  tagline: 'Viaja con el viento a favor',
   description:
     'Agencia de viajes low cost. Nos cuentas a dónde quieres ir (o ni eso) y te buscamos vuelos, hotel, traslados y actividades al mejor precio real. Presupuesto gratis en 24 h y sin compromiso.',
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://viajalisto.es',
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://alisio.es',
   locale: 'es-ES',
   currency: 'EUR',
 
   contact: {
-    email: 'hola@viajalisto.es',
+    email: 'hola@alisio.es',
     // Formato internacional sin espacios para los enlaces wa.me / tel:
     phoneE164: '+34600000000',
     phoneDisplay: '+34 600 00 00 00',
@@ -34,7 +37,7 @@ export const site = {
     // Título-licencia de agencia de viajes de la comunidad autónoma.
     travelAgencyLicence: 'PENDIENTE (código CICMA / registro autonómico)',
     insurer: 'PENDIENTE',
-    dpoEmail: 'privacidad@viajalisto.es',
+    dpoEmail: 'privacidad@alisio.es',
   },
 
   social: {

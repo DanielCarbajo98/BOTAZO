@@ -37,7 +37,7 @@ export function Problem() {
         title="Si te ha pasado alguna de estas tres cosas, este es tu sitio"
         description="No hacemos viajes de lujo ni catálogos de folleto. Hacemos que pagues por tu viaje lo que de verdad cuesta."
       />
-      <div className="mt-12 grid gap-6 md:grid-cols-3">
+      <div data-reveal-stagger className="mt-12 grid gap-6 md:grid-cols-3">
         {pains.map((pain) => (
           <Card key={pain.title} className="border-ink-100">
             <span aria-hidden className="text-3xl">
@@ -89,7 +89,7 @@ export function HowItWorks() {
         title="Cuatro pasos, y solo uno lo haces tú"
         description="El trabajo pesado es el nuestro: comparar hasta que el precio no baja más."
       />
-      <ol className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <ol data-reveal-stagger className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {steps.map((step) => (
           <li key={step.n} className="relative rounded-card border border-ink-100 bg-white p-6 shadow-soft">
             <span className="font-display text-4xl font-semibold text-brand-200">{step.n}</span>
@@ -121,7 +121,7 @@ export function WhyCheaper() {
         title="Por qué te sale más barato con nosotros"
         description="Estos son los ocho métodos que aplicamos en cada búsqueda. Los publicamos enteros: si quieres hacerlo tú, tienes aquí el manual."
       />
-      <div className="mt-12 grid gap-4 md:grid-cols-2">
+      <div data-reveal-stagger className="mt-12 grid gap-4 md:grid-cols-2">
         {tricks.map((trick) => (
           <article
             key={trick.id}
@@ -156,7 +156,7 @@ export function Differentiators() {
         title="Ocho cosas que no vas a encontrar en otra agencia"
         description="Cada una responde a algo que nos han contado clientes hartos del sector."
       />
-      <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+      <div data-reveal-stagger className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         {differentiators.map((item) => (
           <article key={item.id} className="flex flex-col rounded-card border border-ink-100 bg-sand-50 p-6">
             <span aria-hidden className="text-3xl">
@@ -237,7 +237,7 @@ export function Comparison() {
         title="Lo mismo, pero sin las partes malas"
         description="Comparado con las tres formas habituales de organizar un viaje."
       />
-      <div className="mt-12 overflow-x-auto rounded-card border border-ink-100 bg-white shadow-soft">
+      <div data-reveal className="mt-12 overflow-x-auto rounded-card border border-ink-100 bg-white shadow-soft">
         <table className="w-full min-w-[46rem] border-collapse text-left text-sm">
           <caption className="sr-only">
             Comparación entre buscar por tu cuenta, un portal online, una agencia tradicional y {site.name}
@@ -288,7 +288,7 @@ export function PricingTeaser() {
         title="Una tarifa fija por persona. Nada más."
         description="No cobramos comisión sobre el viaje, así que no ganamos más por venderte algo más caro."
       />
-      <div className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
+      <div data-reveal-stagger className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
         {[pricing.escapada, pricing.granViaje].map((tier, index) => (
           <Card key={tier.id} className={index === 1 ? 'border-brand-200 bg-brand-50/50' : ''}>
             <div className="flex items-baseline justify-between gap-4">
@@ -320,7 +320,7 @@ export function PricingTeaser() {
         ))}
       </div>
 
-      <div className="mx-auto mt-8 max-w-4xl rounded-card border-2 border-dashed border-brand-300 bg-brand-50/60 p-6 text-center">
+      <div data-reveal className="mx-auto mt-8 max-w-4xl rounded-card border-2 border-dashed border-brand-300 bg-brand-50/60 p-6 text-center">
         <p className="font-display text-xl font-semibold text-brand-900">{pricing.guarantee}</p>
         <p className="mt-2 text-sm text-ink-600">
           Menores de {pricing.freeFeeUnderAge} años no pagan tarifa · grupos de {pricing.grupoMinSize} o más,{' '}
@@ -343,7 +343,7 @@ export function Testimonials() {
         eyebrow="Opiniones"
         title="Lo que dice la gente que ya ha viajado con nosotros"
       />
-      <div className="mt-12 grid gap-6 md:grid-cols-3">
+      <div data-reveal-stagger className="mt-12 grid gap-6 md:grid-cols-3">
         {testimonials.map((testimonial, index) => (
           <figure key={index} className="flex flex-col rounded-card border border-ink-100 bg-white p-6 shadow-soft">
             <blockquote className="flex-1 text-[0.98rem] leading-relaxed text-ink-700">
@@ -383,7 +383,7 @@ export function DestinationIdeas() {
         title="¿No sabes a dónde ir?"
         description="Estas son medianas orientativas de vuelo ida y vuelta desde España en temporada media. El precio real depende de tus fechas: eso es justo lo que calculamos para ti."
       />
-      <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <ul data-reveal-stagger className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {featured.map((destination) => (
           <li key={destination.slug}>
             <Link
@@ -433,7 +433,7 @@ export function Faq({ limit }: { limit?: number }) {
   return (
     <Section tone="sand" id="faq">
       <SectionHeading eyebrow="Dudas" title="Preguntas frecuentes" />
-      <div className="mx-auto mt-12 max-w-3xl divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-white">
+      <div data-reveal className="mx-auto mt-12 max-w-3xl divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-white">
         {items.map((item) => (
           <details key={item.question} className="group">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 font-semibold text-ink-900 transition-colors hover:bg-ink-50">
@@ -465,7 +465,7 @@ export function Faq({ limit }: { limit?: number }) {
 export function FinalCta() {
   return (
     <Section tone="night">
-      <div className="mx-auto max-w-2xl text-center">
+      <div data-reveal className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl text-white md:text-4xl">
           Cuéntanos tu viaje y deja que hagamos números
         </h2>

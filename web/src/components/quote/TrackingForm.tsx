@@ -44,7 +44,7 @@ export function TrackingForm() {
             id="reference"
             value={reference}
             onChange={(event) => setReference(event.target.value)}
-            placeholder="VJ-7K3QP9"
+            placeholder="AL-7K3QP9"
             className="font-mono uppercase"
             autoComplete="off"
             required

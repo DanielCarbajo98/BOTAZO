@@ -195,3 +195,277 @@
     border-radius: 0.75rem;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Intro de marca
+ * ------------------------------------------------------------------ */
+@layer components {
+  .brand-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    background-image:
+      radial-gradient(ellipse 70% 55% at 50% 42%, rgb(20 191 174 / 0.16), transparent 65%),
+      linear-gradient(180deg, var(--color-ink-900), var(--color-ink-950));
+    /* Red de seguridad: si el JavaScript no llegara, la intro se va igual. */
+    animation: loader-failsafe 0.6s ease 2s forwards;
+  }
+
+  .brand-loader.is-leaving {
+    animation: loader-out 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  }
+
+  .brand-loader__stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-inline: 1.5rem;
+    text-align: center;
+  }
+
+  .brand-loader__globe {
+    width: min(52vw, 15rem);
+    height: auto;
+    animation: loader-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* La franja de puntos cruza el círculo: leída dentro de la esfera, es rotación */
+  .brand-loader__dots {
+    animation: globe-spin 9s linear infinite;
+  }
+
+  .brand-loader__orbit {
+    transform-origin: 120px 120px;
+    animation: orbit-tilt 14s ease-in-out infinite;
+  }
+
+  .brand-loader__plane {
+    offset-path: path('M 120 32 A 88 88 0 1 1 119.9 32');
+    offset-rotate: auto;
+    animation: orbit-fly 5s linear infinite;
+  }
+
+  .brand-loader__word {
+    margin-top: 1.5rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.85rem, 7vw, 2.6rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: white;
+    animation: loader-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+
+  .brand-loader__tagline {
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-brand-300);
+    animation: loader-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+  }
+
+  .brand-loader__bar {
+    position: relative;
+    margin-top: 2rem;
+    display: block;
+    height: 2px;
+    width: 8rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.12);
+  }
+
+  .brand-loader__bar::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    width: 45%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, var(--color-brand-400), transparent);
+    animation: loader-sweep 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes globe-spin {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-132px); /* 12 celdas del patrón: el bucle no se nota */
+  }
+}
+
+@keyframes orbit-fly {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes orbit-tilt {
+  0%,
+  100% {
+    transform: rotate(-8deg) scaleY(0.94);
+  }
+  50% {
+    transform: rotate(8deg) scaleY(1);
+  }
+}
+
+@keyframes loader-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes loader-sweep {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+@keyframes loader-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes loader-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* Sin movimiento: la intro no aporta nada, así que se queda fuera del camino */
+@media (prefers-reduced-motion: reduce) {
+  .brand-loader {
+    animation: loader-failsafe 1ms linear forwards;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Aparición al hacer scroll
+ *
+ * Por defecto todo se ve. La clase `js-reveal` la pone el propio script,
+ * así que sin JavaScript no se oculta nada.
+ * ------------------------------------------------------------------ */
+@layer components {
+  .js-reveal [data-reveal] {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .js-reveal [data-reveal].is-revealed {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Las tarjetas de una misma rejilla entran escalonadas */
+  .js-reveal [data-reveal-stagger] > * {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .js-reveal [data-reveal-stagger].is-revealed > * {
+    opacity: 1;
+    transform: none;
+  }
+
+  .js-reveal [data-reveal-stagger].is-revealed > *:nth-child(2) {
+    transition-delay: 80ms;
+  }
+  .js-reveal [data-reveal-stagger].is-revealed > *:nth-child(3) {
+    transition-delay: 160ms;
+  }
+  .js-reveal [data-reveal-stagger].is-revealed > *:nth-child(4) {
+    transition-delay: 240ms;
+  }
+  .js-reveal [data-reveal-stagger].is-revealed > *:nth-child(5) {
+    transition-delay: 300ms;
+  }
+  .js-reveal [data-reveal-stagger].is-revealed > *:nth-child(n + 6) {
+    transition-delay: 360ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js-reveal [data-reveal],
+  .js-reveal [data-reveal-stagger] > * {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Movimiento de la portada
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* Dos manchas de color que se desplazan muy despacio: la sección respira */
+  .hero-aurora {
+    pointer-events: none;
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 130%;
+    background-image:
+      radial-gradient(closest-side, rgb(20 191 174 / 0.28), transparent),
+      radial-gradient(closest-side, rgb(255 107 74 / 0.2), transparent);
+    background-repeat: no-repeat;
+    background-size:
+      55% 55%,
+      45% 45%;
+    background-position:
+      8% 12%,
+      88% 4%;
+    filter: blur(28px);
+    animation: aurora-drift 26s ease-in-out infinite alternate;
+  }
+
+  .hero-float {
+    animation: hero-float 9s ease-in-out infinite;
+  }
+}
+
+@keyframes aurora-drift {
+  from {
+    background-position:
+      8% 12%,
+      88% 4%;
+  }
+  to {
+    background-position:
+      26% 26%,
+      68% 18%;
+  }
+}
+
+@keyframes hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}

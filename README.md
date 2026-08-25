@@ -214,5 +214,5 @@ equipo, replay de Elo sobre todos los finalizados de la temporada y devuelve:
 
 ## Otros proyectos de este repositorio
 
-- **`web/`** — *Viajalisto*, la web de la agencia de viajes low cost
+- **`web/`** — *Alisio*, la web de la agencia de viajes low cost
   (Next.js + TypeScript). Ver [`web/README.md`](web/README.md).

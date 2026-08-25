@@ -10,7 +10,7 @@ import { dirname, resolve } from 'node:path';
  * el resto de la aplicación no conoce el motor de base de datos.
  */
 
-const DEFAULT_PATH = 'data/viajalisto.db';
+const DEFAULT_PATH = 'data/alisio.db';
 
 let instance: Database.Database | null = null;
 

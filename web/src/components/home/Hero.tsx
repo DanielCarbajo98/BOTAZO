@@ -12,6 +12,7 @@ const trustPoints = [
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-night pt-14 pb-20 text-white md:pt-20 md:pb-28">
+      <div aria-hidden className="hero-aurora" />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-[0.07]"
@@ -93,14 +94,14 @@ function QuoteMock() {
         aria-hidden
         className="absolute -inset-6 rounded-[2.5rem] bg-brand-500/10 blur-2xl"
       />
-      <figure className="relative w-full max-w-md rounded-[1.75rem] border border-white/10 bg-white p-6 text-ink-900 shadow-lift">
+      <figure className="hero-float relative w-full max-w-md rounded-[1.75rem] border border-white/10 bg-white p-6 text-ink-900 shadow-lift">
         <figcaption className="sr-only">
           Ejemplo del presupuesto que enviamos: tres opciones comparadas con su desglose.
         </figcaption>
 
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">Presupuesto VJ-7K3QP9</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">Presupuesto AL-7K3QP9</p>
             <p className="mt-1 font-display text-xl font-semibold">Roma · 4 noches · 2 personas</p>
           </div>
           <span className="rounded-xl bg-coral-50 px-2.5 py-1.5 text-center">

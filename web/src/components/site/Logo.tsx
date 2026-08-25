@@ -6,12 +6,12 @@ export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 40 40" aria-hidden className={cn('size-9', className)}>
       <defs>
-        <linearGradient id="vl-logo" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id="alisio-logo" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="var(--color-brand-500)" />
           <stop offset="100%" stopColor="var(--color-brand-800)" />
         </linearGradient>
       </defs>
-      <rect width="40" height="40" rx="12" fill="url(#vl-logo)" />
+      <rect width="40" height="40" rx="12" fill="url(#alisio-logo)" />
       {/* Avión trazando una curva descendente: el precio baja */}
       <path
         d="M8 27c6.5-1.5 12-6 16.5-13"

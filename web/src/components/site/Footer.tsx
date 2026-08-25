@@ -42,7 +42,12 @@ export function Footer() {
               <LogoMark />
               <span className="font-display text-xl font-semibold text-white">{site.name}</span>
             </div>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-400">{site.tagline}. Buscamos por ti, cobramos una tarifa fija y te enseñamos el desglose completo.</p>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-400">
+              Buscamos por ti, cobramos una tarifa fija y te enseñamos el desglose completo.
+            </p>
+            <p className="mt-4 max-w-xs border-l-2 border-brand-700/50 pl-3 text-sm italic leading-relaxed text-ink-500">
+              {site.story}
+            </p>
             <div className="mt-6 flex flex-col gap-1.5 text-sm">
               <a href={`mailto:${site.contact.email}`} className="text-ink-200 transition-colors hover:text-brand-300">
                 {site.contact.email}

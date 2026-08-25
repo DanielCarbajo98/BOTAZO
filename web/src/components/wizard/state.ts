@@ -73,7 +73,7 @@ export type WizardState = {
   };
 };
 
-export const STORAGE_KEY = 'vl-wizard-v1';
+export const STORAGE_KEY = 'alisio-wizard-v1';
 
 export function initialState(presetDestination?: string): WizardState {
   return {

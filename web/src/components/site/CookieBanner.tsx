@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 
-const STORAGE_KEY = 'vl-cookies-v1';
+const STORAGE_KEY = 'alisio-cookies-v1';
 
 /**
  * Este sitio solo usa almacenamiento técnico (borrador del formulario y sesión
