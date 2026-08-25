@@ -58,8 +58,10 @@ reales → escribe el mensaje. Tres frases bastan:
 
 Validez de 3 a 5 días, siempre. «Guardar y enviar» y avisa por WhatsApp.
 
-**En modo asesor**, además: cada partida lleva su enlace de reserva y marcada la
-casilla de comisión cuando corresponda.
+**En modo asesor**, además: fija el **precio del desbloqueo** (viene sugerido) y
+pon en cada partida su enlace de reserva, marcando la casilla de comisión cuando
+corresponda. El cliente verá precios y forma del viaje, pero no la compañía, el
+alojamiento ni los enlaces hasta que pague.
 
 ## 4 · Seguimiento → 2-5 días
 
@@ -83,8 +85,16 @@ El orden importa:
    minutos.
 4. **Localizadores al cliente en menos de 2 horas.**
 
-En **modo asesor** los pasos 2-4 los hace el cliente: le pasas los enlaces y
-quedáis por WhatsApp mientras reserva, en ese mismo orden.
+En **modo asesor** el orden es otro:
+
+1. El cliente **paga el desbloqueo** (Stripe, o Bizum/transferencia que marcas
+   tú en el panel).
+2. Se le abre el plan entero con los enlaces.
+3. **Reserva él**, y tú le acompañas por WhatsApp en ese mismo orden: vuelo →
+   alojamiento → extras.
+
+El panel te dice qué enlaces ha pulsado y cuándo. Si pagó hace dos días y no ha
+pulsado ninguno, escríbele: se ha atascado.
 
 ## 6 · Antes del viaje
 

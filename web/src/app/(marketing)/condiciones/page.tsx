@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/site/LegalLayout';
 import { pricing, site } from '@/config/site';
 import { isAdvisor, modeCopy } from '@/config/mode';
+import { feeTiers } from '@/config/fees';
 import { eur } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Condiciones de contratación' };
@@ -22,12 +23,12 @@ export default function CondicionesPage() {
       <h2>3. Nuestros {modeCopy.feeLabel}</h2>
       <ul>
         <li>
-          Escapada (Europa y Norte de África, hasta 6 noches): {eur(pricing.escapada.feePerPerson)} por persona, con
-          un mínimo de {eur(pricing.escapada.minPerBooking)} por reserva.
+          Escapada (Europa y Norte de África, hasta 6 noches): {eur(feeTiers.escapada.feePerPerson)} por persona, con
+          un mínimo de {eur(feeTiers.escapada.minPerBooking)} por reserva.
         </li>
         <li>
-          Gran viaje (larga distancia, multidestino o más de 6 noches): {eur(pricing.granViaje.feePerPerson)} por
-          persona, con un mínimo de {eur(pricing.granViaje.minPerBooking)} por reserva.
+          Gran viaje (larga distancia, multidestino o más de 6 noches): {eur(feeTiers.granViaje.feePerPerson)} por
+          persona, con un mínimo de {eur(feeTiers.granViaje.minPerBooking)} por reserva.
         </li>
         <li>
           Menores de {pricing.childAgeLimit} años: {Math.round(pricing.childDiscount * 100)} % de la tarifa. Bebés

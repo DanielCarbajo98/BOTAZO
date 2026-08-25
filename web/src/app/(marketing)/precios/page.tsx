@@ -3,11 +3,12 @@ import { FinalCta, PricingTeaser } from '@/components/home/Sections';
 import { Section, SectionHeading } from '@/components/ui/Card';
 import { pricing, site } from '@/config/site';
 import { isAdvisor, modeCopy, quoteNoun } from '@/config/mode';
+import { feeTiers } from '@/config/fees';
 import { eur } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Precios',
-  description: `Tarifa fija por persona desde ${pricing.escapada.feePerPerson} €, en una línea aparte del presupuesto. Sin comisiones ocultas, sin suscripciones y con garantía: si no te ahorramos, no pagas.`,
+  description: `Tarifa fija por persona desde ${feeTiers.escapada.feePerPerson} €, en una línea aparte del presupuesto. Sin comisiones ocultas, sin suscripciones y con garantía: si no te ahorramos, no pagas.`,
   alternates: { canonical: '/precios' },
 };
 
@@ -100,7 +101,7 @@ export default function PreciosPage() {
           {[
             {
               title: 'La tarifa de gestión',
-              body: `Lo que ves arriba: ${eur(pricing.escapada.feePerPerson)} o ${eur(pricing.granViaje.feePerPerson)} por persona, en una línea aparte del presupuesto. Es nuestro ingreso principal.`,
+              body: `Lo que ves arriba: ${eur(feeTiers.escapada.feePerPerson)} o ${eur(feeTiers.granViaje.feePerPerson)} por persona, en una línea aparte del presupuesto. Es nuestro ingreso principal.`,
             },
             {
               title: 'La comisión del proveedor',

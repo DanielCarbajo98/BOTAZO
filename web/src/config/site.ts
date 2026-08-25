@@ -63,6 +63,15 @@ export const pricing = {
   escapada: { id: 'escapada', label: 'Escapada', feePerPerson: 29, minPerBooking: 49 },
   /** Larga distancia, multidestino o más de 6 noches. */
   granViaje: { id: 'gran-viaje', label: 'Gran viaje', feePerPerson: 59, minPerBooking: 99 },
+  /**
+   * Modo asesor: se cobra por desbloquear el plan, antes de reservar nada.
+   * Es más barato que la escala de agencia porque no gestionamos reservas ni
+   * respondemos de proveedores, y porque el cobro llega antes y sin fugas.
+   */
+  asesor: {
+    escapada: { id: 'escapada', label: 'Escapada', feePerPerson: 19, minPerBooking: 33 },
+    granViaje: { id: 'gran-viaje', label: 'Gran viaje', feePerPerson: 39, minPerBooking: 69 },
+  },
   /** Grupos a partir de 8 personas: tarifa por persona reducida. */
   grupoMinSize: 8,
   grupoDiscount: 0.35,

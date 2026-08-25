@@ -62,6 +62,11 @@ Cuenta con perder entre el 40 y el 50 % por atribución: el cliente compara,
 entra por su cuenta, se le caduca la cookie o reserva desde otro dispositivo.
 **Cuenta con 30-40 € reales por viaje cerrado.**
 
+Por eso la comisión **no puede ser el negocio**: es la propina. El ingreso que
+controlas es el desbloqueo del plan, que está cobrado antes de que el cliente
+reserve nada. Y como quien ha pagado por los enlaces los usa, la fuga baja
+bastante respecto a un plan gratis.
+
 ## Al registrarte
 
 - Te pedirán una web (la tienes), datos fiscales y una cuenta de cobro.

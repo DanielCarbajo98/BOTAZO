@@ -49,6 +49,23 @@ export type QuoteRow = {
   sent_at: string | null;
   responded_at: string | null;
   response_note: string | null;
+  /** Lo que cuesta desbloquear el plan. 0 = sin muro de pago. */
+  unlock_fee: number;
+  unlock_status: 'pendiente' | 'pagado' | 'exento';
+  paid_at: string | null;
+  payment_ref: string | null;
+  payment_method: string | null;
+};
+
+export type ClickRow = {
+  id: string;
+  request_id: string;
+  quote_id: string | null;
+  option_id: string | null;
+  label: string;
+  host: string;
+  ip_hash: string | null;
+  created_at: string;
 };
 
 export type QuoteOptionRow = {
@@ -287,15 +304,27 @@ export class Repository {
 
   /* ------------------------------- presupuestos ------------------------------ */
 
-  createQuote(requestId: string, input: { title: string; message?: string; validUntil?: string }): QuoteRow {
+  createQuote(
+    requestId: string,
+    input: { title: string; message?: string; validUntil?: string; unlockFee?: number },
+  ): QuoteRow {
     const id = newId();
     const timestamp = now();
     this.db
       .prepare(
-        `INSERT INTO quotes (id, request_id, status, title, message, valid_until, created_at, updated_at)
-         VALUES (?, ?, 'borrador', ?, ?, ?, ?, ?)`,
+        `INSERT INTO quotes (id, request_id, status, title, message, valid_until, unlock_fee, created_at, updated_at)
+         VALUES (?, ?, 'borrador', ?, ?, ?, ?, ?, ?)`,
       )
-      .run(id, requestId, input.title, input.message ?? null, input.validUntil ?? null, timestamp, timestamp);
+      .run(
+        id,
+        requestId,
+        input.title,
+        input.message ?? null,
+        input.validUntil ?? null,
+        input.unlockFee ?? 0,
+        timestamp,
+        timestamp,
+      );
     return this.getQuote(id)!;
   }
 
@@ -320,18 +349,60 @@ export class Repository {
     return { quote, options: this.listOptions(quote.id) };
   }
 
-  updateQuote(id: string, input: { title?: string; message?: string; validUntil?: string | null }): void {
+  updateQuote(
+    id: string,
+    input: { title?: string; message?: string; validUntil?: string | null; unlockFee?: number },
+  ): void {
     const quote = this.getQuote(id);
     if (!quote) return;
     this.db
-      .prepare('UPDATE quotes SET title = ?, message = ?, valid_until = ?, updated_at = ? WHERE id = ?')
+      .prepare(
+        'UPDATE quotes SET title = ?, message = ?, valid_until = ?, unlock_fee = ?, updated_at = ? WHERE id = ?',
+      )
       .run(
         input.title ?? quote.title,
         input.message ?? quote.message,
         input.validUntil === undefined ? quote.valid_until : input.validUntil,
+        input.unlockFee ?? quote.unlock_fee,
         now(),
         id,
       );
+  }
+
+  /**
+   * Marca el plan como pagado y, por tanto, desbloquea los detalles.
+   *
+   * Es idempotente a propósito: Stripe puede entregar el mismo webhook varias
+   * veces, y el cliente puede recargar la página de vuelta del pago.
+   */
+  markQuotePaid(quoteId: string, input: { method: string; reference?: string; actor?: string }): QuoteRow | null {
+    const quote = this.getQuote(quoteId);
+    if (!quote) return null;
+    if (quote.unlock_status === 'pagado') return quote;
+
+    const timestamp = now();
+    this.db
+      .prepare(
+        `UPDATE quotes SET unlock_status = 'pagado', paid_at = ?, payment_method = ?, payment_ref = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+      .run(timestamp, input.method, input.reference ?? null, timestamp, quoteId);
+    this.addEvent(quote.request_id, {
+      type: 'pago',
+      message: `Plan desbloqueado · ${input.method}${input.reference ? ` · ${input.reference}` : ''}`,
+      actor: input.actor ?? 'cliente',
+    });
+    return this.getQuote(quoteId);
+  }
+
+  /** Deja el plan abierto sin cobrar (cortesía, prueba, cliente conocido). */
+  exemptQuote(quoteId: string, actor = 'agente'): void {
+    const quote = this.getQuote(quoteId);
+    if (!quote) return;
+    this.db
+      .prepare(`UPDATE quotes SET unlock_status = 'exento', updated_at = ? WHERE id = ?`)
+      .run(now(), quoteId);
+    this.addEvent(quote.request_id, { type: 'pago', message: 'Plan desbloqueado sin coste', actor });
   }
 
   replaceOptions(quoteId: string, options: Omit<QuoteOptionRow, 'id' | 'quote_id'>[]): void {
@@ -401,6 +472,49 @@ export class Repository {
           : `El cliente ha pedido cambios${note ? `: ${note}` : ''}`,
       actor: 'cliente',
     });
+  }
+
+  /* ---------------------------------- clics ---------------------------------- */
+
+  recordClick(input: {
+    requestId: string;
+    quoteId?: string | null;
+    optionId?: string | null;
+    label: string;
+    host: string;
+    ipHash?: string;
+  }): void {
+    this.db
+      .prepare(
+        `INSERT INTO link_clicks (id, request_id, quote_id, option_id, label, host, ip_hash, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        newId(),
+        input.requestId,
+        input.quoteId ?? null,
+        input.optionId ?? null,
+        input.label.slice(0, 120),
+        input.host.slice(0, 120),
+        input.ipHash ?? null,
+        now(),
+      );
+  }
+
+  listClicks(requestId: string, limit = 100): ClickRow[] {
+    return this.db
+      .prepare<[string, number], ClickRow>(
+        'SELECT * FROM link_clicks WHERE request_id = ? ORDER BY created_at DESC LIMIT ?',
+      )
+      .all(requestId, limit);
+  }
+
+  countClicks(requestId: string): number {
+    return (
+      this.db
+        .prepare<[string], { total: number }>('SELECT COUNT(*) AS total FROM link_clicks WHERE request_id = ?')
+        .get(requestId)?.total ?? 0
+    );
   }
 
   /* ------------------------------- usuarios admin ---------------------------- */

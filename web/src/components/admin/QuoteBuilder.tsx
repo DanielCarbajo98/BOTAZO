@@ -256,6 +256,7 @@ export function QuoteBuilder({
   const [quoteId, setQuoteId] = useState<string | null>(quote?.id ?? null);
   const [title, setTitle] = useState(quote?.title ?? `${destination} · ${nights} noches`);
   const [message, setMessage] = useState(quote?.message ?? '');
+  const [unlockFee, setUnlockFee] = useState(quote?.unlock_fee ?? suggestedFee);
   const [validUntil, setValidUntil] = useState(
     quote?.valid_until ?? new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10),
   );
@@ -297,6 +298,7 @@ export function QuoteBuilder({
     title,
     message,
     validUntil: validUntil || null,
+    unlockFee,
     options: options.map((option) => ({
       name: option.name,
       angle: option.angle,
@@ -382,6 +384,27 @@ export function QuoteBuilder({
             value={validUntil}
             onChange={(event) => setValidUntil(event.target.value)}
           />
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-dashed border-brand-300 bg-brand-50/60 p-4">
+        <Label htmlFor="quote-unlock" hint="0 = plan abierto, sin muro de pago">
+          Precio del desbloqueo
+        </Label>
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            id="quote-unlock"
+            type="number"
+            min={0}
+            step={1}
+            className="w-32"
+            value={unlockFee}
+            onChange={(event) => setUnlockFee(Number(event.target.value) || 0)}
+          />
+          <p className="text-sm text-ink-600">
+            Sugerido para este viaje: <strong>{eur(suggestedFee)}</strong>. Hasta que lo pague, el cliente ve los
+            precios y la forma del viaje, pero no la compañía, el hotel ni los enlaces.
+          </p>
         </div>
       </div>
 

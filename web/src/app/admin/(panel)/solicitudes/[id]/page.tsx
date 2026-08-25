@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { NotesEditor } from '@/components/admin/NotesEditor';
+import { PaymentControl } from '@/components/admin/PaymentControl';
 import { QuoteBuilder } from '@/components/admin/QuoteBuilder';
 import { StatusControl } from '@/components/admin/StatusControl';
 import { BriefSummary } from '@/components/quote/BriefSummary';
@@ -25,6 +26,7 @@ export default async function SolicitudDetalle({ params }: { params: Promise<{ i
   const activeQuote = quotes[0] ?? null;
   const activeOptions = activeQuote ? repository.listOptions(activeQuote.id) : [];
   const events = repository.listEvents(request.id);
+  const clicks = repository.listClicks(request.id, 30);
   const nights = nightsFromBrief(request.brief.dates);
   const suggestedFee = calculateFee(request.brief);
 
@@ -151,6 +153,41 @@ export default async function SolicitudDetalle({ params }: { params: Promise<{ i
               </p>
             </section>
           ) : null}
+
+          {activeQuote ? (
+            <section className="rounded-2xl border border-ink-200 bg-white p-5">
+              <h2 className="text-lg">Cobro del desbloqueo</h2>
+              <div className="mt-3">
+                <PaymentControl quote={activeQuote} />
+              </div>
+            </section>
+          ) : null}
+
+          <section className="rounded-2xl border border-ink-200 bg-white p-5">
+            <h2 className="flex items-center justify-between gap-3 text-lg">
+              Clics en los enlaces
+              <span className="rounded-pill bg-ink-100 px-2.5 py-1 text-sm font-semibold text-ink-700">
+                {clicks.length}
+              </span>
+            </h2>
+            {clicks.length === 0 ? (
+              <p className="mt-2 text-sm text-ink-500">
+                Todavía no ha pulsado ningún enlace de reserva. Si ya ha pasado un par de días, es buen momento para
+                escribirle.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm">
+                {clicks.map((click) => (
+                  <li key={click.id} className="flex flex-wrap justify-between gap-2 border-b border-ink-100 pb-2 last:border-0">
+                    <span className="font-medium text-ink-800">{click.label}</span>
+                    <span className="text-ink-400">
+                      {click.host} · {formatDateTime(click.created_at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           <section className="rounded-2xl border border-ink-200 bg-white p-5">
             <h2 className="text-lg">Notas internas</h2>

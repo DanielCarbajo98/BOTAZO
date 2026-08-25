@@ -9,7 +9,7 @@
  */
 import { Repository } from '../src/lib/repository';
 import { getDb } from '../src/lib/db';
-import { estimate } from '../src/lib/estimator';
+import { calculateFee, estimate } from '../src/lib/estimator';
 import { site } from '../src/config/site';
 import type { Brief } from '../src/lib/brief';
 
@@ -70,6 +70,7 @@ const quote = repo.createQuote(request.id, {
   message:
     'Ana, he mirado las tres semanas alrededor de tus fechas. Saliendo el jueves en lugar del viernes el vuelo baja 62 € por persona, y el hotel del centro sale mejor que el apartamento con desayuno incluido.\n\nTe recomiendo la equilibrada: vuelo directo a hora decente y hotel a diez minutos andando del Panteón.',
   validUntil: inDays(5),
+  unlockFee: calculateFee(brief),
 });
 
 const flight = (airline: string, stops: number, depart: string, arrive: string, url: string) =>
@@ -219,3 +220,4 @@ repo.sendQuote(quote.id, 'demo');
 console.log(`Solicitud de ejemplo creada: ${request.reference}`);
 console.log(`Enlace del cliente:  ${site.url}/presupuesto/${request.reference}?t=${accessToken}`);
 console.log(`Panel:               ${site.url}/admin/solicitudes/${request.id}`);
+console.log(`Desbloqueo:          ${calculateFee(brief)} € (pendiente de pago)`);

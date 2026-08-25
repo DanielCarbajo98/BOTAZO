@@ -68,6 +68,46 @@ Los programas de afiliación donde registrarse están en
 [`docs/afiliacion.md`](docs/afiliacion.md), y el proceso de trabajo completo en
 [`docs/manual-operativo.md`](docs/manual-operativo.md).
 
+## Muro de pago
+
+En modo asesor el plan se entrega **bloqueado**. El cliente ve el precio de cada
+opción, lo que se ahorra y la forma del viaje (directo o con escala, cuánto
+dura, categoría y zona del alojamiento, régimen, cancelación). Lo que no ve
+hasta pagar es la **identidad**: qué compañía, qué día y hora exactos, qué
+alojamiento y el enlace de cada reserva.
+
+Es lo que resuelve la fuga de la afiliación: sin muro se escapa entre el 40 y el
+50 % de las comisiones porque el cliente reserva por su cuenta. Con muro, el
+ingreso está cobrado antes de que reserve nada.
+
+**El censurado ocurre en el servidor** (`redactOption` en `src/lib/quote.ts`):
+los datos ocultos no llegan al navegador, así que no basta con mirar el código
+fuente de la página. Hay tests que lo comprueban cadena por cadena.
+
+El precio del desbloqueo se fija por presupuesto en el constructor del panel,
+prefijado con la tarifa sugerida. A cero, el plan sale abierto.
+
+### Cobro
+
+| Con `STRIPE_SECRET_KEY` | Sin claves |
+|---|---|
+| Pasarela de Stripe, y el webhook desbloquea | Bizum o transferencia; el agente lo marca en el panel |
+
+Hablamos con la API de Stripe por HTTP, sin su SDK. La firma del webhook se
+verifica siempre —con ventana de 5 minutos contra reenvíos— y `markQuotePaid` es
+idempotente, porque Stripe reintenta. Al volver de la pasarela también se
+confirma la sesión contra Stripe: nunca nos fiamos del `?pago=ok` de la URL.
+
+## Enlaces con seguimiento
+
+Los enlaces de reserva no se entregan en crudo: pasan por `/ir/[token]`, que
+registra el clic y redirige. Así el panel te dice **quién ha ido a reservar qué
+y cuándo**, y puedes cambiar el destino sin reenviar el plan.
+
+El destino viaja firmado dentro del propio enlace. Sin firma esto sería un
+redirector abierto de manual: cualquiera podría usar el dominio de tapadera para
+mandar tráfico a donde quisiera. Hay un test que lo intenta y falla.
+
 ## Puesta en marcha
 
 ```bash

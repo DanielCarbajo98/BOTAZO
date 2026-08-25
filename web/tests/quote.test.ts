@@ -7,7 +7,9 @@ import {
   parseFlight,
   parseLines,
   parseStay,
+  isUnlocked,
   quoteInputSchema,
+  redactOption,
   urlHost,
 } from '@/lib/quote';
 
@@ -120,5 +122,102 @@ describe('enlaces de reserva', () => {
     expect(parsed.success).toBe(true);
     expect(parsed.data?.options[0]?.stay?.bookingUrl).toBe('https://booking.com/x?aid=1');
     expect(parsed.data?.options[0]?.activities[0]?.commission).toBe(true);
+  });
+});
+
+describe('muro de pago', () => {
+  const option = {
+    id: 'o1',
+    quote_id: 'q1',
+    position: 0,
+    name: 'Equilibrada',
+    angle: 'balanced' as const,
+    summary: 'Directo y hotel céntrico',
+    recommended: 1,
+    flight_json: JSON.stringify({
+      legs: [
+        {
+          direction: 'ida',
+          from: 'Madrid MAD',
+          to: 'Roma FCO',
+          date: '2026-11-01',
+          depart: '10:40',
+          arrive: '13:20',
+          airline: 'Iberia',
+          stops: 0,
+          duration: '2 h 40',
+          note: 'Terminal 4',
+        },
+      ],
+      baggage: 'Cabina 10 kg',
+      bookingNote: 'Reservar en la web de Iberia',
+      bookingUrl: 'https://www.iberia.com/?aff=alisio',
+      bookingWhere: 'Iberia',
+      commission: true,
+    }),
+    stay_json: JSON.stringify({
+      name: 'Hotel del Corso',
+      category: 'Hotel 3★',
+      area: 'Centro histórico',
+      board: 'Desayuno',
+      nights: 4,
+      rating: '8,7',
+      cancellation: 'Gratis hasta 24 h antes',
+      note: 'Pedir habitación interior',
+      bookingUrl: 'https://booking.com/x?aid=1',
+      bookingWhere: 'Booking',
+      commission: true,
+    }),
+    transfers_json: JSON.stringify([{ name: 'Leonardo Express', detail: 'Ida y vuelta', bookingUrl: 'https://omio.es/x', commission: true }]),
+    activities_json: JSON.stringify([{ name: 'Coliseo sin cola', bookingUrl: 'https://civitatis.com/x', commission: true }]),
+    price_flights: 318,
+    price_stay: 344,
+    price_transfers: 44,
+    price_activities: 96,
+    price_other: 0,
+    price_fee: 38,
+    market_reference: 1110,
+    notes: 'El vuelo de Iberia sale de la T4',
+  };
+
+  it('bloqueado: no se escapa ni la aerolínea, ni el hotel, ni un solo enlace', () => {
+    const serialized = JSON.stringify(redactOption(option, false));
+    for (const secret of ['Iberia', 'Hotel del Corso', 'iberia.com', 'booking.com', 'omio.es', 'civitatis.com', '10:40', '2026-11-01', 'T4', 'Terminal 4']) {
+      expect(serialized, `se ha filtrado "${secret}"`).not.toContain(secret);
+    }
+  });
+
+  it('bloqueado: sí se ve lo necesario para decidir', () => {
+    const masked = redactOption(option, false);
+    const flight = parseFlight(masked.flight_json);
+    const stay = parseStay(masked.stay_json);
+
+    expect(flight?.legs[0]?.stops).toBe(0);
+    expect(flight?.legs[0]?.duration).toBe('2 h 40');
+    expect(flight?.baggage).toBe('Cabina 10 kg');
+    expect(stay?.category).toBe('Hotel 3★');
+    expect(stay?.area).toBe('Centro histórico');
+    expect(stay?.cancellation).toContain('Gratis');
+    expect(stay?.name).toBe('');
+    // El precio nunca se oculta: es lo que tiene que valorar.
+    expect(masked.price_flights).toBe(318);
+    expect(masked.market_reference).toBe(1110);
+  });
+
+  it('desbloqueado: se devuelve tal cual, sin tocar nada', () => {
+    expect(redactOption(option, true)).toBe(option);
+  });
+
+  it('no revienta con una opción vacía', () => {
+    const empty = { ...option, flight_json: null, stay_json: null, transfers_json: null, activities_json: null };
+    expect(() => redactOption(empty, false)).not.toThrow();
+    expect(redactOption(empty, false).flight_json).toBeNull();
+  });
+
+  it('isUnlocked: gratis o pagado abren, pendiente con precio no', () => {
+    expect(isUnlocked({ unlock_fee: 0, unlock_status: 'pendiente' })).toBe(true);
+    expect(isUnlocked({ unlock_fee: 38, unlock_status: 'pagado' })).toBe(true);
+    expect(isUnlocked({ unlock_fee: 38, unlock_status: 'exento' })).toBe(true);
+    expect(isUnlocked({ unlock_fee: 38, unlock_status: 'pendiente' })).toBe(false);
   });
 });

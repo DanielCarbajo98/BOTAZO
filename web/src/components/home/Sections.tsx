@@ -8,6 +8,7 @@ import { testimonials } from '@/content/testimonials';
 import { destinations } from '@/lib/catalog';
 import { pricing, site } from '@/config/site';
 import { isAdvisor, modeCopy, quoteNoun } from '@/config/mode';
+import { feeTiers } from '@/config/fees';
 import { eur } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
@@ -71,7 +72,9 @@ const steps = [
   {
     n: '03',
     title: isAdvisor ? 'Te mandamos tres opciones' : 'Te enviamos tres opciones',
-    body: `La más barata, la equilibrada y la cómoda. Con desglose línea por línea${isAdvisor ? ', el enlace de cada reserva' : ''}, lo que ganas y lo que pierdes en cada una, y nuestra recomendación.`,
+    body: isAdvisor
+      ? 'La más barata, la equilibrada y la cómoda. Ves lo que cuesta cada una y lo que te ahorras antes de pagar nada, con nuestra recomendación razonada.'
+      : 'La más barata, la equilibrada y la cómoda. Con desglose línea por línea, lo que ganas y lo que pierdes en cada una, y nuestra recomendación.',
     detail: `${isAdvisor ? 'Plan gratis' : 'Presupuesto gratis'} · sin compromiso · válido varios días`,
   },
   {
@@ -278,10 +281,16 @@ export function Comparison() {
 export function WhoBooks() {
   return (
     <Section tone="sand">
-      <div data-reveal className="mx-auto max-w-3xl rounded-card border border-ink-100 bg-white p-8 md:p-10">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">Cómo funciona la reserva</p>
-        <h2 className="mt-3 text-2xl md:text-3xl">{modeCopy.whoBooks.title}</h2>
-        <p className="mt-4 text-[1.02rem] leading-relaxed text-ink-700">{modeCopy.whoBooks.body}</p>
+      <p className="mx-auto mb-8 max-w-2xl text-center text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+        Cómo funciona el pago y la reserva
+      </p>
+      <div className="mx-auto grid max-w-4xl gap-5 md:grid-cols-2">
+        {[modeCopy.payment, modeCopy.whoBooks].map((block) => (
+          <div key={block.title} data-reveal className="rounded-card border border-ink-100 bg-white p-7">
+            <h2 className="text-xl md:text-2xl">{block.title}</h2>
+            <p className="mt-3 text-[0.98rem] leading-relaxed text-ink-700">{block.body}</p>
+          </div>
+        ))}
       </div>
     </Section>
   );
@@ -296,7 +305,7 @@ export function PricingTeaser() {
         description="No va escondida dentro del precio del viaje. La ves, la comparas y decides. Y si no te ahorramos dinero, no la pagas."
       />
       <div data-reveal-stagger className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
-        {[pricing.escapada, pricing.granViaje].map((tier, index) => (
+        {[feeTiers.escapada, feeTiers.granViaje].map((tier, index) => (
           <Card key={tier.id} className={index === 1 ? 'border-brand-200 bg-brand-50/50' : ''}>
             <div className="flex items-baseline justify-between gap-4">
               <h3 className="text-xl">{tier.label}</h3>
@@ -332,8 +341,9 @@ export function PricingTeaser() {
           {Math.round(pricing.grupoDiscount * 100)} % de descuento · máximo {eur(pricing.feeCap)} por reserva.
         </p>
         <p className="mx-auto mt-4 max-w-2xl border-t border-brand-200 pt-4 text-sm leading-relaxed text-ink-600">
-          Una pareja a Roma paga {eur(58)}. Una familia de cuatro, {eur(87)}. Si te ahorramos {eur(200)}, la cuenta
-          sale sola; si no, no cobramos.
+          Una pareja a Roma paga {eur(feeTiers.escapada.feePerPerson * 2)}. Si te ahorramos {eur(200)}, sales
+          ganando {eur(200 - feeTiers.escapada.feePerPerson * 2)} <em>y</em> una tarde entera. Y si no te ahorramos
+          nada, no cobramos.
         </p>
         <ButtonLink href="/precios" variant="outline" size="sm" className="mt-5">
           Ver el detalle de precios

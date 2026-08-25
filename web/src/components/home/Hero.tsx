@@ -1,5 +1,5 @@
 import { ButtonLink } from '@/components/ui/Button';
-import { pricing } from '@/config/site';
+import { feeTiers } from '@/config/fees';
 import { modeCopy, quoteNounCapitalized } from '@/config/mode';
 import { eur } from '@/lib/utils';
 
@@ -148,8 +148,8 @@ function QuoteMock() {
             </div>
           ))}
           <div className="flex justify-between gap-4 font-semibold text-brand-800">
-            <dt>Nuestra tarifa (2 × {eur(pricing.escapada.feePerPerson)})</dt>
-            <dd className="tabular-nums">{eur(pricing.escapada.feePerPerson * 2)}</dd>
+            <dt>Nuestra tarifa (2 × {eur(feeTiers.escapada.feePerPerson)})</dt>
+            <dd className="tabular-nums">{eur(feeTiers.escapada.feePerPerson * 2)}</dd>
           </div>
         </dl>
 

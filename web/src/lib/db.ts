@@ -129,6 +129,31 @@ const MIGRATIONS: { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    name: '002_pago_y_clics',
+    sql: `
+      -- El plan se entrega bloqueado: el cliente ve precios y forma del viaje,
+      -- pero no la aerolínea, el hotel ni los enlaces hasta que paga.
+      ALTER TABLE quotes ADD COLUMN unlock_fee REAL NOT NULL DEFAULT 0;
+      ALTER TABLE quotes ADD COLUMN unlock_status TEXT NOT NULL DEFAULT 'pendiente';
+      ALTER TABLE quotes ADD COLUMN paid_at TEXT;
+      ALTER TABLE quotes ADD COLUMN payment_ref TEXT;
+      ALTER TABLE quotes ADD COLUMN payment_method TEXT;
+
+      -- Cada clic en un enlace de reserva, para saber quién ha ido a dónde.
+      CREATE TABLE link_clicks (
+        id         TEXT PRIMARY KEY,
+        request_id TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+        quote_id   TEXT,
+        option_id  TEXT,
+        label      TEXT NOT NULL,
+        host       TEXT NOT NULL,
+        ip_hash    TEXT,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX idx_clicks_request ON link_clicks(request_id, created_at DESC);
+    `,
+  },
 ];
 
 function migrate(db: Database.Database): void {

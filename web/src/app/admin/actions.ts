@@ -71,6 +71,28 @@ export async function saveNotesAction(requestId: string, notes: string): Promise
  * Guarda (o crea) el presupuesto de una solicitud y, opcionalmente, lo envía.
  * Enviar significa hacerlo visible en el enlace privado del cliente.
  */
+/** Cobro manual: el cliente ha pagado por Bizum o transferencia. */
+export async function markPaidAction(quoteId: string, method: string, reference: string): Promise<ActionState> {
+  const actor = await requireActor();
+  const quote = repo().getQuote(quoteId);
+  if (!quote) return { error: 'Plan no encontrado.' };
+
+  repo().markQuotePaid(quoteId, { method: method.slice(0, 40) || 'manual', reference: reference.slice(0, 80), actor });
+  revalidatePath(`/admin/solicitudes/${quote.request_id}`);
+  return { ok: true };
+}
+
+/** Abre el plan sin cobrar: cortesía, prueba o cliente de confianza. */
+export async function exemptQuoteAction(quoteId: string): Promise<ActionState> {
+  const actor = await requireActor();
+  const quote = repo().getQuote(quoteId);
+  if (!quote) return { error: 'Plan no encontrado.' };
+
+  repo().exemptQuote(quoteId, actor);
+  revalidatePath(`/admin/solicitudes/${quote.request_id}`);
+  return { ok: true };
+}
+
 export async function saveQuoteAction(
   requestId: string,
   quoteId: string | null,
@@ -100,12 +122,14 @@ export async function saveQuoteAction(
       title: input.title,
       message: input.message,
       validUntil: input.validUntil ?? undefined,
+      unlockFee: input.unlockFee,
     });
   } else {
     repository.updateQuote(quote.id, {
       title: input.title,
       message: input.message,
       validUntil: input.validUntil,
+      unlockFee: input.unlockFee,
     });
   }
 

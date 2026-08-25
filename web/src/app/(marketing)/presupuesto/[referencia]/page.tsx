@@ -8,6 +8,9 @@ import { QuoteActions } from '@/components/quote/QuoteActions';
 import { QuoteView } from '@/components/quote/QuoteView';
 import { site } from '@/config/site';
 import { isAdvisor, quoteNoun } from '@/config/mode';
+import { UnlockPanel } from '@/components/quote/UnlockPanel';
+import { isUnlocked, optionSaving, redactOption } from '@/lib/quote';
+import { isSessionPaid, paymentMode } from '@/lib/payments';
 import { repo, REQUEST_STATUSES, STATUS_META, type RequestStatus } from '@/lib/repository';
 import { eur, formatDateTime } from '@/lib/utils';
 
@@ -25,17 +28,27 @@ export default async function SolicitudPage({
   searchParams,
 }: {
   params: Promise<{ referencia: string }>;
-  searchParams: Promise<{ t?: string; nuevo?: string }>;
+  searchParams: Promise<{ t?: string; nuevo?: string; pago?: string; session_id?: string }>;
 }) {
   const { referencia } = await params;
-  const { t: token, nuevo } = await searchParams;
+  const { t: token, nuevo, pago, session_id: sessionId } = await searchParams;
 
   if (!token) return <AccesoDenegado reference={referencia} />;
 
   const request = repo().verifyAccess(referencia, token);
   if (!request) return <AccesoDenegado reference={referencia} />;
 
+  // Vuelta de la pasarela: confirmamos el pago contra Stripe antes de abrir
+  // nada. Es la red por si el webhook no está configurado o llega tarde.
+  if (pago === 'ok' && sessionId) {
+    await confirmarPago(sessionId, request.id);
+  }
+
   const visible = repo().getVisibleQuote(request.id);
+  const unlocked = visible ? isUnlocked(visible.quote) : false;
+  const options = visible ? visible.options.map((option) => redactOption(option, unlocked)) : [];
+  // El ahorro ya lleva descontados nuestros honorarios: es lo que gana de verdad.
+  const bestSaving = options.reduce((best, option) => Math.max(best, optionSaving(option)), 0);
   const status = REQUEST_STATUSES.includes(request.status) ? request.status : 'nueva';
   const currentIndex = TIMELINE.indexOf(status);
   const isNew = nuevo === '1';
@@ -103,13 +116,37 @@ export default async function SolicitudPage({
 
         {visible ? (
           <div className="space-y-8">
-            <QuoteView quote={visible.quote} options={visible.options} travelers={request.travelers} />
-            <QuoteActions
-              reference={request.reference}
-              token={token}
-              quoteId={visible.quote.id}
-              alreadyAnswered={visible.quote.status === 'aceptado' || visible.quote.status === 'cambios'}
+            {pago === 'cancelado' && !unlocked ? (
+              <p className="rounded-card border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-900">
+                Has salido del pago sin completarlo. No se te ha cobrado nada y tu plan sigue aquí cuando quieras.
+              </p>
+            ) : null}
+
+            <QuoteView
+              quote={visible.quote}
+              options={options}
+              travelers={request.travelers}
+              unlocked={unlocked}
+              requestId={request.id}
             />
+
+            {unlocked ? (
+              <QuoteActions
+                reference={request.reference}
+                token={token}
+                quoteId={visible.quote.id}
+                alreadyAnswered={visible.quote.status === 'aceptado' || visible.quote.status === 'cambios'}
+              />
+            ) : (
+              <UnlockPanel
+                reference={request.reference}
+                token={token}
+                quoteId={visible.quote.id}
+                amount={visible.quote.unlock_fee}
+                travelers={request.travelers}
+                bestSaving={bestSaving}
+              />
+            )}
           </div>
         ) : (
           <section className="rounded-card border border-ink-100 bg-white p-6 md:p-8">
@@ -182,4 +219,28 @@ function AccesoDenegado({ reference }: { reference: string }) {
       </p>
     </div>
   );
+}
+
+
+/**
+ * Confirma el pago contra Stripe al volver de la pasarela.
+ *
+ * Nunca damos por bueno el `?pago=ok` de la URL: cualquiera podría escribirlo a
+ * mano. Preguntamos a Stripe, y además comprobamos que la sesión pagada
+ * corresponde a un presupuesto de **esta** solicitud.
+ */
+async function confirmarPago(sessionId: string, requestId: string): Promise<void> {
+  if (paymentMode() !== 'stripe') return;
+  try {
+    const { paid, quoteId } = await isSessionPaid(sessionId);
+    if (!paid || !quoteId) return;
+
+    const quote = repo().getQuote(quoteId);
+    if (!quote || quote.request_id !== requestId) return;
+
+    repo().markQuotePaid(quoteId, { method: 'Stripe', reference: sessionId });
+  } catch (error) {
+    // Si Stripe no responde, el webhook acabará desbloqueándolo igualmente.
+    console.warn('[pago] no se pudo confirmar la sesión:', error);
+  }
 }

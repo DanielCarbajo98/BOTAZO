@@ -174,3 +174,65 @@ function option(name = 'Equilibrada') {
     notes: null,
   };
 }
+
+describe('desbloqueo de pago', () => {
+  const withQuote = (unlockFee: number) => {
+    const { request } = create();
+    const quote = repo.createQuote(request.id, { title: 'Roma', unlockFee });
+    repo.sendQuote(quote.id);
+    return { request, quote: repo.getQuote(quote.id)! };
+  };
+
+  it('un plan con precio nace pendiente de pago', () => {
+    const { quote } = withQuote(38);
+    expect(quote.unlock_fee).toBe(38);
+    expect(quote.unlock_status).toBe('pendiente');
+  });
+
+  it('marcarlo pagado lo desbloquea y deja rastro', () => {
+    const { request, quote } = withQuote(38);
+    repo.markQuotePaid(quote.id, { method: 'Bizum', reference: 'ABC123' });
+
+    const updated = repo.getQuote(quote.id)!;
+    expect(updated.unlock_status).toBe('pagado');
+    expect(updated.payment_method).toBe('Bizum');
+    expect(updated.paid_at).toBeTruthy();
+    expect(repo.listEvents(request.id).some((e) => e.type === 'pago')).toBe(true);
+  });
+
+  it('es idempotente: Stripe puede repetir el webhook', () => {
+    const { request, quote } = withQuote(38);
+    repo.markQuotePaid(quote.id, { method: 'Stripe', reference: 'cs_1' });
+    const firstPaidAt = repo.getQuote(quote.id)!.paid_at;
+
+    repo.markQuotePaid(quote.id, { method: 'Stripe', reference: 'cs_1' });
+    repo.markQuotePaid(quote.id, { method: 'Stripe', reference: 'cs_1' });
+
+    expect(repo.getQuote(quote.id)!.paid_at).toBe(firstPaidAt);
+    expect(repo.listEvents(request.id).filter((e) => e.type === 'pago')).toHaveLength(1);
+  });
+
+  it('se puede abrir sin cobrar', () => {
+    const { quote } = withQuote(38);
+    repo.exemptQuote(quote.id);
+    expect(repo.getQuote(quote.id)!.unlock_status).toBe('exento');
+  });
+});
+
+describe('clics en enlaces', () => {
+  it('registra y lista los clics de una solicitud', () => {
+    const { request } = create();
+    repo.recordClick({ requestId: request.id, label: 'Vuelo', host: 'iberia.com' });
+    repo.recordClick({ requestId: request.id, label: 'Alojamiento', host: 'booking.com' });
+
+    expect(repo.countClicks(request.id)).toBe(2);
+    expect(repo.listClicks(request.id).map((c) => c.label)).toContain('Alojamiento');
+  });
+
+  it('los clics se van con la solicitud si se borra', () => {
+    const { request } = create();
+    repo.recordClick({ requestId: request.id, label: 'Vuelo', host: 'iberia.com' });
+    db.prepare('DELETE FROM requests WHERE id = ?').run(request.id);
+    expect(repo.countClicks(request.id)).toBe(0);
+  });
+});

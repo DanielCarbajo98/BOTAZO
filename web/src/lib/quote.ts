@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { QuoteOptionRow } from '@/lib/repository';
+import type { QuoteOptionRow, QuoteRow } from '@/lib/repository';
 
 /* ------------------------------------------------------------------ *
  * Contenido de una opción de presupuesto
@@ -169,8 +169,87 @@ export const quoteInputSchema = z.object({
   title: z.string().trim().min(1, 'El presupuesto necesita un título').max(120),
   message: z.string().trim().max(2000).default(''),
   validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  /** Lo que cuesta desbloquear los detalles. 0 = plan abierto. */
+  unlockFee: z.number().min(0).max(10_000).default(0),
   options: z.array(quoteOptionInputSchema).min(1, 'Añade al menos una opción').max(4),
 });
 
 export type QuoteInput = z.infer<typeof quoteInputSchema>;
 export type QuoteOptionInput = z.infer<typeof quoteOptionInputSchema>;
+
+/* ------------------------------------------------------------------ *
+ * Muro de pago
+ * ------------------------------------------------------------------ */
+
+/**
+ * Oculta lo que el cliente todavía no ha pagado.
+ *
+ * El criterio: **se ve la forma del viaje, nunca su identidad.** Sabe si es
+ * directo o con escala, cuánto dura, qué categoría de hotel y en qué zona, y
+ * cuánto cuesta todo — suficiente para decidir si le compensa. No sabe qué
+ * aerolínea, a qué hora, qué hotel ni dónde reservarlo, que es exactamente el
+ * trabajo por el que paga.
+ *
+ * Esto se aplica **en el servidor**. Los datos ocultos no llegan al navegador,
+ * así que no basta con mirar el código fuente para saltárselo.
+ */
+export function redactOption(option: QuoteOptionRow, unlocked: boolean): QuoteOptionRow {
+  if (unlocked) return option;
+
+  const flight = parseFlight(option.flight_json);
+  const stay = parseStay(option.stay_json);
+
+  const redactedFlight: QuoteFlight | null = flight
+    ? {
+        legs: flight.legs.map((leg) => ({
+          direction: leg.direction,
+          from: leg.from,
+          to: leg.to,
+          stops: leg.stops,
+          duration: leg.duration,
+          // La fecha exacta, la hora y la compañía son parte de lo que se paga.
+          date: '',
+          depart: '',
+          arrive: '',
+          airline: '',
+        })),
+        baggage: flight.baggage,
+        commission: false,
+      }
+    : null;
+
+  const redactedStay: QuoteStay | null = stay
+    ? {
+        name: '',
+        category: stay.category,
+        area: stay.area,
+        board: stay.board,
+        nights: stay.nights,
+        rating: stay.rating,
+        cancellation: stay.cancellation,
+        commission: false,
+      }
+    : null;
+
+  const stripLinks = (json: string | null): string | null => {
+    const lines = parseLines(json);
+    if (lines.length === 0) return null;
+    return JSON.stringify(lines.map((line) => ({ name: line.name, detail: line.detail, commission: false })));
+  };
+
+  return {
+    ...option,
+    flight_json: redactedFlight ? JSON.stringify(redactedFlight) : null,
+    stay_json: redactedStay ? JSON.stringify(redactedStay) : null,
+    transfers_json: stripLinks(option.transfers_json),
+    activities_json: stripLinks(option.activities_json),
+    // Las notas suelen delatar la compañía o el hotel.
+    notes: null,
+  };
+}
+
+/** ¿Puede el cliente ver los detalles completos de este plan? */
+export function isUnlocked(quote: Pick<QuoteRow, 'unlock_fee' | 'unlock_status'>): boolean {
+  if (quote.unlock_status === 'pagado' || quote.unlock_status === 'exento') return true;
+  return quote.unlock_fee <= 0;
+}

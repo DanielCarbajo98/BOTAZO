@@ -1,4 +1,5 @@
 import { pricing } from '@/config/site';
+import { feeTiers, type FeeTierValue } from '@/config/fees';
 import type { Brief, BoardPref, Priority, StayLocation, StayType } from '@/lib/brief';
 import { nightsFromBrief, travelerCount } from '@/lib/brief';
 import {
@@ -339,12 +340,12 @@ export function estimate(brief: Brief): Estimate {
 }
 
 /** Decide si un viaje va por tarifa de escapada o de gran viaje. */
-export function resolveFeeTier(brief: Brief): typeof pricing.escapada | typeof pricing.granViaje {
+export function resolveFeeTier(brief: Brief): FeeTierValue {
   const { band } = resolveBaseline(brief);
   const nights = nightsFromBrief(brief.dates);
   const isBigTrip =
     band === 'largo' || band === 'ultralargo' || nights > 6 || brief.trip.destinations.length > 1;
-  return isBigTrip ? pricing.granViaje : pricing.escapada;
+  return isBigTrip ? feeTiers.granViaje : feeTiers.escapada;
 }
 
 /**

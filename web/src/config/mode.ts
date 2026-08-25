@@ -41,6 +41,8 @@ type ModeCopy = {
   cardHighlights: string[];
   /** Bloque que explica quién reserva. */
   whoBooks: { title: string; body: string };
+  /** Cómo se cobra: muro de pago en asesor, al reservar en agencia. */
+  payment: { title: string; body: string };
   comparisonRow: { feature: string; alone: string; ota: string; agency: string; us: string };
   /** Página de propuesta que ve el cliente. */
   quote: { intro: string; ctaPrimary: string; ctaHelp: string; done: string };
@@ -65,9 +67,9 @@ const copies: Record<SiteMode, ModeCopy> = {
     heroLead:
       'Nos cuentas a dónde quieres ir —o ni eso— y nosotros nos pasamos las horas comparando aeropuertos, fechas, escalas y hoteles hasta encontrar la combinación más barata que encaje contigo. Te mandamos el plan con el desglose completo y los enlaces para que reserves tú, acompañado.',
     finalStep: {
-      title: 'Reservas tú, acompañado',
-      body: 'Te pasamos los enlaces exactos y el orden correcto: primero el vuelo, luego el hotel, después los extras. Quedamos por WhatsApp mientras lo haces, por si algo no cuadra.',
-      detail: 'Reservas a tu nombre · con tu tarjeta · nosotros al lado',
+      title: 'Lo desbloqueas y reservas tú',
+      body: 'Si te encaja, pagas y se abre el plan entero: compañías, horarios exactos, alojamiento y el enlace directo de cada reserva. Quedamos por WhatsApp mientras lo haces, en el orden correcto.',
+      detail: 'Pago único · reservas a tu nombre · nosotros al lado',
     },
     includes: [
       ['Estudio de tu viaje', 'Analizamos tu formulario y definimos la estrategia de búsqueda.'],
@@ -88,6 +90,10 @@ const copies: Record<SiteMode, ModeCopy> = {
       'Enlaces directos y acompañamiento al reservar',
       'Radar de precios y ayuda si algo sale mal',
     ],
+    payment: {
+      title: 'Ves el precio antes de pagar nada',
+      body: 'El plan llega con las tres opciones, lo que cuesta cada una y lo que te ahorras. Con eso ya puedes decidir si te compensa. Lo que se desbloquea al pagar es el trabajo: qué compañía, qué día exacto, qué alojamiento y dónde reservar cada cosa. Si no te convence, no pagas y no has perdido nada.',
+    },
     whoBooks: {
       title: 'Reservas tú, y eso es bueno para ti',
       body: 'Cada reserva queda a tu nombre y con tu tarjeta, directamente con la aerolínea o el hotel. No hay intermediario que pueda desaparecer, ni un localizador que solo nosotros podamos tocar: si necesitas cambiar algo, hablas directamente con quien presta el servicio. Nosotros te decimos exactamente qué reservar, dónde y en qué orden.',
@@ -154,6 +160,10 @@ const copies: Record<SiteMode, ModeCopy> = {
       'Gestión completa de las reservas',
       'Radar de precios y soporte durante el viaje',
     ],
+    payment: {
+      title: 'No pagas hasta que aceptas',
+      body: 'El presupuesto es gratis y sin compromiso. Solo se cobra cuando eliges una opción y confirmamos disponibilidad, y siempre te decimos antes cuánto y cómo se abona.',
+    },
     whoBooks: {
       title: 'Reservamos nosotros, a tu nombre',
       body: 'Te decimos siempre quién emite cada reserva. Recibes los localizadores a tu nombre y puedes gestionarlos directamente con la compañía: nunca vas a tener una reserva opaca que solo podamos tocar nosotros.',
