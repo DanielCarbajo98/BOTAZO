@@ -35,9 +35,9 @@ export function Problem() {
   return (
     <Section tone="white">
       <SectionHeading
-        eyebrow="A quién ayudamos"
-        title="Si te ha pasado alguna de estas tres cosas, este es tu sitio"
-        description="No hacemos viajes de lujo ni catálogos de folleto. Hacemos que pagues por tu viaje lo que de verdad cuesta."
+        eyebrow="Para quién es esto"
+        title={<>«¿Cómo viajas tan barato?»</>}
+        description="Es la pregunta que nos hacen siempre. Y la respuesta no son contactos ni precios secretos: es método, y unas cuantas horas que tú seguramente no tienes. Si te ha pasado alguna de estas tres cosas, este es tu sitio."
       />
       <div data-reveal-stagger className="mt-12 grid gap-6 md:grid-cols-3">
         {pains.map((pain) => (

@@ -65,14 +65,15 @@ describe('textos del modo asesor', () => {
 
   it('llama honorarios a lo que cobra, no tarifa de gestión', async () => {
     const { modeCopy } = await loadMode('asesor');
-    expect(modeCopy.feeLabel).toBe('honorarios de asesoramiento');
+    expect(modeCopy.feeLabel).toBe('honorarios');
   });
 });
 
 describe('textos del modo agencia', () => {
   it('recupera el lenguaje de agencia al activar la licencia', async () => {
     const { modeCopy } = await loadMode('agencia');
-    expect(modeCopy.roleShort).toBe('Agencia low cost');
+    // La promesa comercial no cambia con la licencia; lo que cambia es lo legal
+    expect(modeCopy.roleShort).toBe('Expertos en viajar barato');
     expect(modeCopy.roleLegal).toBe('agencia de viajes');
     expect(modeCopy.feeLabel).toBe('tarifa de gestión');
     expect(modeCopy.finalStep.title).toContain('Reservamos');

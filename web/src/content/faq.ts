@@ -26,7 +26,7 @@ export const faqs: FaqItem[] = [
     group: 'Precio',
     question: '¿Cómo ganáis dinero si decís que sois más baratos?',
     answer: isAdvisor
-      ? 'De dos sitios, y no hay un tercero. Uno: nuestros honorarios de asesoramiento, en una línea aparte del plan. Y dos: cuando reservas por los enlaces que te pasamos, algunos hoteles, seguros y empresas de actividades nos pagan una comisión. Sale de su margen, no de tu bolsillo: pagas exactamente el mismo precio que si entraras por tu cuenta, y puedes comprobarlo. Es lo que nos permite dedicarle horas de verdad a cada plan.'
+      ? 'De dos sitios, y no hay un tercero. Uno: lo que nos pagas por el plan, en una línea aparte y a la vista. Y dos: cuando reservas por los enlaces que te pasamos, algunos hoteles, seguros y empresas de actividades nos pagan una comisión. Sale de su margen, no de tu bolsillo: pagas exactamente el mismo precio que si entraras por tu cuenta, y puedes comprobarlo. Es lo que nos permite dedicarle horas de verdad a cada plan.'
       : 'De tres sitios, y no hay un cuarto. Uno: la tarifa fija por persona que ves en el presupuesto, en una línea aparte. Dos: la comisión que algunos hoteles, seguros y empresas de actividades nos pagan por traerles la reserva, que sale de su margen y no de tu bolsillo. Y tres: si después de reservar el precio baja y rehacemos la reserva, nos quedamos una cuarta parte de ese ahorro. Nada de eso encarece tu viaje, y todo aparece detallado en el presupuesto.',
   },
   {

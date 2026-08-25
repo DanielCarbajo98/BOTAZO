@@ -20,7 +20,10 @@ export const mode: SiteMode = configured === 'agencia' ? 'agencia' : 'asesor';
 export const isAdvisor = mode === 'asesor';
 
 type ModeCopy = {
-  /** Bajo el logotipo y en la cabecera. */
+  /**
+   * Bajo el logotipo. Es la promesa, no la figura jurídica: quien llega aquí
+   * no busca una asesoría, busca dejar de pagar de más.
+   */
   roleShort: string;
   /** Cómo nos definimos en textos legales. */
   roleLegal: string;
@@ -55,15 +58,15 @@ type ModeCopy = {
 
 const copies: Record<SiteMode, ModeCopy> = {
   asesor: {
-    roleShort: 'Asesoría low cost',
+    roleShort: 'Expertos en viajar barato',
     roleLegal: 'servicio de asesoramiento y planificación de viajes',
-    feeLabel: 'honorarios de asesoramiento',
+    feeLabel: 'honorarios',
     feeLabelShort: 'honorarios',
     cta: 'Pedir mi plan de viaje gratis',
     ctaShort: 'Pedir plan gratis',
     ctaSecondary: 'Ver mi plan',
     metaDescription:
-      'Asesoría de viajes low cost. Nos cuentas a dónde quieres ir (o ni eso) y te preparamos el plan completo —vuelos, hotel, traslados y actividades— al mejor precio real. Reservas tú, con nuestros enlaces. Plan gratis en 24 h.',
+      '¿Cansado de que los vuelos te salgan por un ojo de la cara y de perder dinero en agencias? Buscamos tu viaje como lo haría alguien que se dedica a esto: vuelos, hotel, traslados y actividades al precio real. Plan gratis en 24 h.',
     heroLead:
       'Nos cuentas a dónde quieres ir —o ni eso— y nosotros nos pasamos las horas comparando aeropuertos, fechas, escalas y hoteles hasta encontrar la combinación más barata que encaje contigo. Te mandamos el plan con el desglose completo y los enlaces para que reserves tú, acompañado.',
     finalStep: {
@@ -123,7 +126,7 @@ const copies: Record<SiteMode, ModeCopy> = {
   },
 
   agencia: {
-    roleShort: 'Agencia low cost',
+    roleShort: 'Expertos en viajar barato',
     roleLegal: 'agencia de viajes',
     feeLabel: 'tarifa de gestión',
     feeLabelShort: 'tarifa',
