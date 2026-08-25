@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/site/LegalLayout';
 import { pricing, site } from '@/config/site';
+import { isAdvisor, modeCopy } from '@/config/mode';
 import { eur } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Condiciones de contratación' };
@@ -9,11 +10,7 @@ export default function CondicionesPage() {
   return (
     <LegalLayout title="Condiciones generales de contratación" updated="pendiente de publicación">
       <h2>1. Qué contratas</h2>
-      <p>
-        {site.name} presta un servicio de asesoramiento y gestión de reservas de viaje. La tarifa de gestión
-        retribuye ese trabajo. El precio de los servicios de viaje (vuelos, alojamiento, traslados, actividades) se
-        abona íntegramente a su proveedor, sin recargo por nuestra parte.
-      </p>
+      <p>{modeCopy.conditionsObject}</p>
 
       <h2>2. Presupuesto</h2>
       <p>
@@ -22,7 +19,7 @@ export default function CondicionesPage() {
         antes de confirmar, te lo comunicamos y puedes desistir sin coste.
       </p>
 
-      <h2>3. Tarifa de gestión</h2>
+      <h2>3. Nuestros {modeCopy.feeLabel}</h2>
       <ul>
         <li>
           Escapada (Europa y Norte de África, hasta 6 noches): {eur(pricing.escapada.feePerPerson)} por persona, con
@@ -43,9 +40,9 @@ export default function CondicionesPage() {
         <li>Importe máximo por reserva: {eur(pricing.feeCap)}.</li>
       </ul>
       <p>
-        La tarifa se devenga en el momento de confirmar la reserva y aparece siempre desglosada en el presupuesto.
-        El mínimo por reserva responde a que el trabajo de búsqueda es prácticamente el mismo con independencia del
-        número de viajeros.
+        {isAdvisor
+          ? 'Los honorarios se devengan al aceptar la propuesta y aparecen siempre desglosados en ella. El mínimo por viaje responde a que el trabajo de búsqueda es prácticamente el mismo con independencia del número de viajeros.'
+          : 'La tarifa se devenga en el momento de confirmar la reserva y aparece siempre desglosada en el presupuesto. El mínimo por reserva responde a que el trabajo de búsqueda es prácticamente el mismo con independencia del número de viajeros.'}
       </p>
 
       <h3>3.1. Servicio prioritario (opcional)</h3>
@@ -81,27 +78,57 @@ export default function CondicionesPage() {
       </p>
 
       <h2>5. Pagos, cancelaciones y modificaciones</h2>
-      <p>
-        Las condiciones de pago, cancelación y modificación son las de cada proveedor y se detallan en el
-        presupuesto antes de confirmar. La tarifa de gestión no es reembolsable una vez emitidas las reservas,
-        porque el trabajo ya está realizado; sí lo es si la cancelación se produce por causa imputable a nosotros.
-      </p>
+      {isAdvisor ? (
+        <p>
+          El importe de cada servicio de viaje lo abonas directamente al proveedor, y son sus condiciones de pago,
+          cancelación y modificación las que se aplican; te las señalamos en la propuesta antes de que reserves.
+          Nosotros solo percibimos nuestros honorarios de asesoramiento, que no son reembolsables una vez entregada
+          la propuesta porque el trabajo ya está hecho, salvo que el incumplimiento sea nuestro.
+        </p>
+      ) : (
+        <p>
+          Las condiciones de pago, cancelación y modificación son las de cada proveedor y se detallan en el
+          presupuesto antes de confirmar. La tarifa de gestión no es reembolsable una vez emitidas las reservas,
+          porque el trabajo ya está realizado; sí lo es si la cancelación se produce por causa imputable a nosotros.
+        </p>
+      )}
 
       <h2>6. Derecho de desistimiento</h2>
-      <p>
-        Conforme al artículo 103.l) del RDL 1/2007, los servicios de viaje con fecha determinada están excluidos del
-        derecho de desistimiento de 14 días propio de la contratación a distancia. Sí se aplican los derechos de
-        cancelación previstos en la normativa de viajes combinados cuando el conjunto contratado tenga esa
-        consideración.
-      </p>
+      {isAdvisor ? (
+        <p>
+          Como consumidor dispones de 14 días naturales para desistir del servicio de asesoramiento sin dar
+          explicaciones. Ahora bien, si nos pides expresamente que empecemos a trabajar antes de que termine ese
+          plazo y te entregamos la propuesta completa, el derecho de desistimiento se extingue conforme al artículo
+          103.a) del RDL 1/2007. Te lo recordamos por escrito antes de empezar. Este apartado se refiere únicamente
+          a nuestros honorarios: las cancelaciones de vuelos, hoteles o cualquier otro servicio se rigen por las
+          condiciones del proveedor con el que hayas contratado.
+        </p>
+      ) : (
+        <p>
+          Conforme al artículo 103.l) del RDL 1/2007, los servicios de viaje con fecha determinada están excluidos
+          del derecho de desistimiento de 14 días propio de la contratación a distancia. Sí se aplican los derechos
+          de cancelación previstos en la normativa de viajes combinados cuando el conjunto contratado tenga esa
+          consideración.
+        </p>
+      )}
 
-      <h2>7. Viajes combinados y servicios de viaje vinculados</h2>
-      <p>
-        Cuando la combinación de servicios que contratas constituya un viaje combinado o un servicio de viaje
-        vinculado en el sentido de la Directiva (UE) 2015/2302 y del RDL 1/2007, se te entregará el formulario de
-        información normalizada correspondiente antes de la contratación, junto con la información sobre la garantía
-        frente a insolvencia.
-      </p>
+      <h2>7. Viajes combinados</h2>
+      {isAdvisor ? (
+        <p>
+          El servicio que contratas es exclusivamente de asesoramiento y <strong>no constituye un viaje combinado
+          ni un servicio de viaje vinculado</strong> en el sentido de la Directiva (UE) 2015/2302 y del RDL 1/2007:
+          no organizamos, no comercializamos y no cobramos ninguno de los servicios de viaje, que contratas tú
+          directamente con cada proveedor. En consecuencia, la protección frente a insolvencia aplicable es la del
+          proveedor con el que contrates cada servicio, y así se te indica en cada propuesta.
+        </p>
+      ) : (
+        <p>
+          Cuando la combinación de servicios que contratas constituya un viaje combinado o un servicio de viaje
+          vinculado en el sentido de la Directiva (UE) 2015/2302 y del RDL 1/2007, se te entregará el formulario de
+          información normalizada correspondiente antes de la contratación, junto con la información sobre la
+          garantía frente a insolvencia.
+        </p>
+      )}
 
       <h2>8. Reclamaciones</h2>
       <p>

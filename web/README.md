@@ -3,6 +3,9 @@
 > *Los alisios son los vientos constantes que cruzaban el Atlántico y empujaban
 > a los barcos sin gastar ni un remo.*
 
+> **La web arranca en modo asesor** (sin licencia de agencia). Ver
+> [Modo de operación](#modo-de-operación) más abajo.
+
 Web completa para una agencia de viajes que trabaja por **presupuesto a medida**:
 el cliente cuenta su viaje en un formulario guiado, un agente busca de verdad, y
 el cliente recibe una propuesta con tres opciones comparadas y el desglose de
@@ -36,6 +39,35 @@ precios completo.
 
 ---
 
+## Modo de operación
+
+`src/config/mode.ts` gobierna cómo se presenta el negocio entero. Es un solo
+interruptor y **todo el texto que depende de él vive en ese archivo**:
+
+| Modo | Quién reserva | Requisitos |
+|---|---|---|
+| **`asesor`** (por defecto) | **El cliente**, con sus enlaces | Ninguno |
+| `agencia` | Nosotros | Título-licencia autonómico + garantía frente a insolvencia |
+
+```bash
+NEXT_PUBLIC_SITE_MODE=agencia   # el día que llegue la licencia
+```
+
+En modo asesor la web **no se presenta como agencia de viajes**, no vende viajes
+combinados y cada partida del plan lleva su enlace de reserva (normalmente de
+afiliación) con una marca visible cuando genera comisión. El cambio de modo
+reescribe solos el logotipo, la portada, la página de precios, el aviso legal,
+las condiciones y las preguntas frecuentes. Hay tests que comprueban que en
+modo asesor ningún texto legal se presenta como agencia.
+
+Por qué importa: sin licencia se puede asesorar, pero **no** vender un vuelo y
+un hotel como un conjunto con precio cerrado — eso es un viaje combinado y exige
+licencia y garantía.
+
+Los programas de afiliación donde registrarse están en
+[`docs/afiliacion.md`](docs/afiliacion.md), y el proceso de trabajo completo en
+[`docs/manual-operativo.md`](docs/manual-operativo.md).
+
 ## Puesta en marcha
 
 ```bash
@@ -59,6 +91,7 @@ valor por defecto inseguro; **en producción el arranque falla si no lo defines*
 | `npm run db:seed -- email "Nombre" "contraseña"` | Alta de usuario del backoffice |
 | `npm run admin:hash -- "contraseña"` | Hash scrypt suelto |
 | `npm run analiza:precios` | Modelo de rentabilidad de la tarifa actual |
+| `npm run db:demo` | Solicitud y propuesta de ejemplo para ver el producto |
 | `npm run check:csp` | Verifica que los scripts servidos llevan el nonce correcto (con el servidor levantado) |
 
 ---

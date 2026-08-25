@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/Button';
+import { modeCopy } from '@/config/mode';
 
 export default function NotFound() {
   return (
@@ -12,7 +13,7 @@ export default function NotFound() {
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <ButtonLink href="/">Ir al inicio</ButtonLink>
         <ButtonLink href="/presupuesto" variant="outline">
-          Pedir presupuesto
+          {modeCopy.ctaShort}
         </ButtonLink>
       </div>
       <p className="mt-8 text-sm text-ink-400">

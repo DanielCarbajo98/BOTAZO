@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { FinalCta, PricingTeaser } from '@/components/home/Sections';
 import { Section, SectionHeading } from '@/components/ui/Card';
 import { pricing, site } from '@/config/site';
+import { isAdvisor, modeCopy, quoteNoun } from '@/config/mode';
 import { eur } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -10,25 +11,19 @@ export const metadata: Metadata = {
   alternates: { canonical: '/precios' },
 };
 
-const includes = [
-  ['Estudio de tu viaje', 'Un agente analiza tu formulario y define la estrategia de búsqueda.'],
-  ['Búsqueda completa', 'Aeropuertos alternativos, calendario completo, compañías, combinaciones y alojamientos en varios canales.'],
-  ['Presupuesto con tres opciones', 'Con desglose línea por línea y nuestra recomendación razonada.'],
-  ['Una ronda de cambios', 'Si nada te encaja, ajustamos y volvemos a buscar sin coste.'],
-  ['Gestión de las reservas', 'Emitimos todo y te mandamos los localizadores a tu nombre.'],
-  [
-    'Radar de precios',
-    `Seguimos vigilando y rehacemos la reserva si baja. El ${Math.round(pricing.savingShare.client * 100)} % del ahorro es tuyo.`,
-  ],
-  ['Soporte durante el viaje', 'WhatsApp con una persona que conoce tu expediente.'],
-  ['Ayuda si algo sale mal', 'Te explicamos qué compensación te corresponde y cómo reclamarla.'],
-];
+const includes = modeCopy.includes;
 
-const notIncluded = [
-  ['El precio del viaje', 'Vuelos, hoteles y servicios los pagas a su precio, sin recargo nuestro.'],
-  ['Seguros', 'Te lo buscamos y comparamos, pero lo contratas tú a la aseguradora.'],
-  ['Tasas y visados', 'Te avisamos de todos los que necesitas y de cuánto cuestan.'],
-];
+const notIncluded: [string, string][] = isAdvisor
+  ? [
+      ['El precio del viaje', 'Lo pagas directamente al proveedor, al mismo precio que si entras por tu cuenta.'],
+      ['La reserva en sí', 'La haces tú, con tu tarjeta y a tu nombre. Nosotros te acompañamos mientras la haces.'],
+      ['Tasas y visados', 'Te avisamos de todos los que necesitas y de cuánto cuestan.'],
+    ]
+  : [
+      ['El precio del viaje', 'Vuelos, hoteles y servicios los pagas a su precio, sin recargo nuestro.'],
+      ['Seguros', 'Te lo buscamos y comparamos, pero lo contratas tú a la aseguradora.'],
+      ['Tasas y visados', 'Te avisamos de todos los que necesitas y de cuánto cuestan.'],
+    ];
 
 export default function PreciosPage() {
   return (
@@ -87,8 +82,9 @@ export default function PreciosPage() {
               ))}
             </ul>
             <p className="mt-6 rounded-2xl bg-sand-100 p-4 text-sm leading-relaxed text-ink-600">
-              Cuando reservamos a tu nombre, pagas el importe exacto del proveedor. Puedes comprobarlo en su web con
-              el localizador que te damos.
+              {isAdvisor
+                ? 'Pagas el importe exacto que marca el proveedor. Puedes comprobarlo tú mismo entrando en su web sin nuestro enlace: es el mismo precio.'
+                : 'Cuando reservamos a tu nombre, pagas el importe exacto del proveedor. Puedes comprobarlo en su web con el localizador que te damos.'}
             </p>
           </div>
         </div>
@@ -151,7 +147,7 @@ export default function PreciosPage() {
           <h2 className="text-3xl">Cómo funciona la garantía</h2>
           <ol className="mt-6 space-y-4 text-[0.98rem] leading-relaxed text-ink-700">
             <li className="rounded-2xl border border-ink-100 bg-sand-50 p-5">
-              <strong className="text-ink-900">1.</strong> Recibes nuestro presupuesto con el desglose completo.
+              <strong className="text-ink-900">1.</strong> Recibes nuestro {quoteNoun} con el desglose completo.
             </li>
             <li className="rounded-2xl border border-ink-100 bg-sand-50 p-5">
               <strong className="text-ink-900">2.</strong> Buscas por tu cuenta el mismo viaje: mismas fechas, mismo

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Inter } from 'next/font/google';
 import { site } from '@/config/site';
+import { modeCopy } from '@/config/mode';
 import './globals.css';
 
 const inter = Inter({
@@ -22,10 +23,11 @@ export const metadata: Metadata = {
     default: `${site.name} · ${site.tagline}`,
     template: `%s · ${site.name}`,
   },
-  description: site.description,
+  description: modeCopy.metaDescription,
   applicationName: site.name,
   keywords: [
-    'agencia de viajes low cost',
+    modeCopy.roleShort.toLowerCase(),
+    'viajes low cost',
     'vuelos baratos',
     'presupuesto de viaje gratis',
     'viajes baratos a medida',
@@ -38,12 +40,12 @@ export const metadata: Metadata = {
     url: site.url,
     siteName: site.name,
     title: `${site.name} · ${site.tagline}`,
-    description: site.description,
+    description: modeCopy.metaDescription,
   },
   twitter: {
     card: 'summary_large_image',
     title: `${site.name} · ${site.tagline}`,
-    description: site.description,
+    description: modeCopy.metaDescription,
   },
   robots: {
     index: true,

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/site/LegalLayout';
 import { site } from '@/config/site';
+import { isAdvisor, modeCopy } from '@/config/mode';
 
 export const metadata: Metadata = { title: 'Aviso legal', robots: { index: true, follow: true } };
 
@@ -19,16 +20,17 @@ export default function AvisoLegalPage() {
         <li>Datos registrales: {site.legal.registry}</li>
         <li>Correo electrónico: {site.contact.email}</li>
         <li>Teléfono: {site.contact.phoneDisplay}</li>
-        <li>Título-licencia de agencia de viajes: {site.legal.travelAgencyLicence}</li>
-        <li>Garantía / seguro de responsabilidad civil: {site.legal.insurer}</li>
+        {isAdvisor ? null : (
+          <>
+            <li>Título-licencia de agencia de viajes: {site.legal.travelAgencyLicence}</li>
+            <li>Garantía frente a insolvencia: {site.legal.insurer}</li>
+          </>
+        )}
+        <li>Seguro de responsabilidad civil: {site.legal.insurer}</li>
       </ul>
 
       <h2>2. Objeto</h2>
-      <p>
-        {site.name} es una agencia de viajes que presta servicios de asesoramiento, búsqueda, comparación y gestión
-        de reservas de servicios de viaje (transporte, alojamiento, traslados y actividades). Las condiciones de
-        cada servicio contratado son las del proveedor final, que se entregan junto al presupuesto.
-      </p>
+      <p>{modeCopy.legalObject}</p>
 
       <h2>3. Condiciones de uso</h2>
       <p>
@@ -37,7 +39,7 @@ export default function AvisoLegalPage() {
         extraer datos, así como cualquier intento de acceso no autorizado a las áreas privadas.
       </p>
 
-      <h2>4. Precios y presupuestos</h2>
+      <h2>4. Precios y propuestas</h2>
       <p>
         Los importes orientativos que se muestran automáticamente en el formulario son estimaciones estadísticas y
         <strong> no constituyen una oferta contractual</strong>. Solo es vinculante el presupuesto que enviamos de

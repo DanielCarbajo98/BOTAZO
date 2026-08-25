@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { site } from '@/config/site';
+import { modeCopy } from '@/config/mode';
 import { cn } from '@/lib/utils';
 
 export function LogoMark({ className }: { className?: string }) {
@@ -47,7 +48,7 @@ export function Logo({ className, invert = false }: { className?: string; invert
           {site.name}
         </span>
         <span className={cn('mt-1 text-[0.62rem] font-semibold uppercase tracking-[0.18em]', invert ? 'text-brand-300' : 'text-brand-700')}>
-          Agencia low cost
+          {modeCopy.roleShort}
         </span>
       </span>
     </Link>

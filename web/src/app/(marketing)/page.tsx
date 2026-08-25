@@ -10,15 +10,17 @@ import {
   PricingTeaser,
   Problem,
   Testimonials,
+  WhoBooks,
   WhyCheaper,
 } from '@/components/home/Sections';
 import { JsonLd } from '@/components/site/JsonLd';
 import { faqs } from '@/content/faq';
 import { site } from '@/config/site';
+import { isAdvisor, modeCopy } from '@/config/mode';
 
 export const metadata: Metadata = {
   title: `${site.name} · ${site.tagline}`,
-  description: site.description,
+  description: modeCopy.metaDescription,
   alternates: { canonical: '/' },
 };
 
@@ -26,9 +28,9 @@ export default function HomePage() {
   const structuredData = [
     {
       '@context': 'https://schema.org',
-      '@type': 'TravelAgency',
+      '@type': isAdvisor ? 'ProfessionalService' : 'TravelAgency',
       name: site.name,
-      description: site.description,
+      description: modeCopy.metaDescription,
       url: site.url,
       email: site.contact.email,
       telephone: site.contact.phoneE164,
@@ -56,6 +58,7 @@ export default function HomePage() {
       <WhyCheaper />
       <Differentiators />
       <Comparison />
+      <WhoBooks />
       <PricingTeaser />
       <Testimonials />
       <DestinationIdeas />

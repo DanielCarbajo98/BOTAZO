@@ -5,6 +5,38 @@ import type { QuoteOptionRow } from '@/lib/repository';
  * Contenido de una opción de presupuesto
  * ------------------------------------------------------------------ */
 
+/**
+ * Enlace de reserva (normalmente de afiliación).
+ *
+ * Solo aceptamos http y https: un `javascript:` o un `data:` en un enlace que
+ * luego pintamos en la página del cliente sería una inyección de manual.
+ */
+export const bookingUrlSchema = z
+  .string()
+  .trim()
+  .max(600)
+  .refine((value) => value === '' || /^https?:\/\//i.test(value), 'El enlace debe empezar por http:// o https://');
+
+/** Segunda barrera, en el momento de pintar. */
+export function isSafeUrl(value: string | null | undefined): value is string {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/** Dominio legible, para que el cliente vea a dónde va antes de pulsar. */
+export function urlHost(value: string): string {
+  try {
+    return new URL(value).host.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
 export const flightLegSchema = z.object({
   direction: z.enum(['ida', 'vuelta']),
   from: z.string().trim().max(80).default(''),
@@ -22,6 +54,12 @@ export const quoteFlightSchema = z.object({
   legs: z.array(flightLegSchema).max(8).default([]),
   baggage: z.string().trim().max(160).default(''),
   bookingNote: z.string().trim().max(300).optional(),
+  /** Dónde tiene que reservar el cliente este vuelo. */
+  bookingUrl: bookingUrlSchema.optional(),
+  /** Con quién reserva: aerolínea, buscador, agencia… */
+  bookingWhere: z.string().trim().max(80).optional(),
+  /** Si esa reserva nos genera comisión. Se lo decimos al cliente. */
+  commission: z.boolean().default(false),
 });
 
 export const quoteStaySchema = z.object({
@@ -33,11 +71,16 @@ export const quoteStaySchema = z.object({
   rating: z.string().trim().max(40).optional(),
   cancellation: z.string().trim().max(160).optional(),
   note: z.string().trim().max(300).optional(),
+  bookingUrl: bookingUrlSchema.optional(),
+  bookingWhere: z.string().trim().max(80).optional(),
+  commission: z.boolean().default(false),
 });
 
 export const quoteLineSchema = z.object({
   name: z.string().trim().max(120).default(''),
   detail: z.string().trim().max(300).optional(),
+  bookingUrl: bookingUrlSchema.optional(),
+  commission: z.boolean().default(false),
 });
 
 export type QuoteFlight = z.infer<typeof quoteFlightSchema>;

@@ -1,9 +1,10 @@
 import { ButtonLink } from '@/components/ui/Button';
 import { pricing } from '@/config/site';
+import { modeCopy, quoteNounCapitalized } from '@/config/mode';
 import { eur } from '@/lib/utils';
 
 const trustPoints = [
-  { icon: '💸', label: 'Presupuesto gratis' },
+  { icon: '💸', label: `${quoteNounCapitalized} gratis` },
   { icon: '⏱️', label: 'Respuesta en 24 h' },
   { icon: '🔒', label: 'Sin compromiso' },
   { icon: '🧾', label: 'Tarifa fija y visible' },
@@ -31,7 +32,7 @@ export function Hero() {
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-400 opacity-60" />
               <span className="relative inline-flex size-2 rounded-full bg-brand-400" />
             </span>
-            Presupuesto gratis y sin compromiso en 24 h
+            {quoteNounCapitalized} gratis y sin compromiso en 24 h
           </span>
 
           <h1 className="mt-6 text-4xl leading-[1.08] text-white sm:text-5xl lg:text-[3.4rem]">
@@ -39,15 +40,11 @@ export function Hero() {
             <span className="block text-brand-300">Es que los buscas como todo el mundo.</span>
           </h1>
 
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-300">
-            Nos cuentas a dónde quieres ir —o ni eso— y nosotros nos pasamos las horas comparando aeropuertos,
-            fechas, escalas y hoteles hasta encontrar la combinación más barata que encaje contigo. Te enviamos el
-            presupuesto con el desglose completo y tú decides.
-          </p>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-300">{modeCopy.heroLead}</p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href="/presupuesto" size="lg" variant="coral" className="sm:min-w-64">
-              Pedir mi presupuesto gratis
+              {modeCopy.cta}
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
@@ -101,7 +98,7 @@ function QuoteMock() {
 
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">Presupuesto AL-7K3QP9</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">{quoteNounCapitalized} AL-7K3QP9</p>
             <p className="mt-1 font-display text-xl font-semibold">Roma · 4 noches · 2 personas</p>
           </div>
           <span className="rounded-xl bg-coral-50 px-2.5 py-1.5 text-center">
@@ -157,7 +154,7 @@ function QuoteMock() {
         </dl>
 
         <p className="mt-4 rounded-xl bg-ink-50 p-3 text-xs leading-relaxed text-ink-500">
-          Ejemplo ilustrativo del formato de presupuesto. Los precios reales dependen de cada búsqueda.
+          Ejemplo ilustrativo del formato. Los precios reales dependen de cada búsqueda.
         </p>
       </figure>
     </div>

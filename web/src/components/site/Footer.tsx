@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { site } from '@/config/site';
+import { modeCopy } from '@/config/mode';
 import { LogoMark } from '@/components/site/Logo';
 
 const columns = [
   {
     title: 'Viaja con nosotros',
     links: [
-      { href: '/presupuesto', label: 'Pedir presupuesto gratis' },
+      { href: '/presupuesto', label: modeCopy.ctaShort },
       { href: '/como-funciona', label: 'Cómo funciona' },
       { href: '/precios', label: 'Cuánto cobramos' },
       { href: '/seguimiento', label: 'Seguir mi solicitud' },

@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { TrackingForm } from '@/components/quote/TrackingForm';
 import { site } from '@/config/site';
+import { quoteNoun } from '@/config/mode';
 
 export const metadata: Metadata = {
   title: 'Seguir mi solicitud',
-  description: 'Recupera el enlace privado de tu presupuesto con tu número de referencia y tu email.',
+  description: `Recupera el enlace privado de tu ${quoteNoun} con tu número de referencia y tu email.`,
   robots: { index: false, follow: true },
 };
 

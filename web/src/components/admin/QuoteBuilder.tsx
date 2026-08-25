@@ -23,7 +23,7 @@ type LegDraft = {
   note: string;
 };
 
-type LineDraft = { name: string; detail: string };
+type LineDraft = { name: string; detail: string; bookingUrl: string; commission: boolean };
 
 type OptionDraft = {
   key: string;
@@ -34,6 +34,9 @@ type OptionDraft = {
   legs: LegDraft[];
   baggage: string;
   bookingNote: string;
+  flightUrl: string;
+  flightWhere: string;
+  flightCommission: boolean;
   stayName: string;
   stayCategory: string;
   stayArea: string;
@@ -42,6 +45,9 @@ type OptionDraft = {
   stayRating: string;
   stayCancellation: string;
   stayNote: string;
+  stayUrl: string;
+  stayWhere: string;
+  stayCommission: boolean;
   transfers: LineDraft[];
   activities: LineDraft[];
   priceFlights: number;
@@ -75,6 +81,9 @@ function emptyOption(angle: OptionAngle, nights: number, fee: number): OptionDra
     legs: [emptyLeg('ida'), emptyLeg('vuelta')],
     baggage: '',
     bookingNote: '',
+    flightUrl: '',
+    flightWhere: '',
+    flightCommission: false,
     stayName: '',
     stayCategory: '',
     stayArea: '',
@@ -83,6 +92,9 @@ function emptyOption(angle: OptionAngle, nights: number, fee: number): OptionDra
     stayRating: '',
     stayCancellation: '',
     stayNote: '',
+    stayUrl: '',
+    stayWhere: '',
+    stayCommission: false,
     transfers: [],
     activities: [],
     priceFlights: 0,
@@ -97,10 +109,28 @@ function emptyOption(angle: OptionAngle, nights: number, fee: number): OptionDra
 }
 
 function fromRow(row: QuoteOptionRow): OptionDraft {
-  const flight = row.flight_json ? (JSON.parse(row.flight_json) as { legs?: LegDraft[]; baggage?: string; bookingNote?: string }) : null;
+  const flight = row.flight_json
+    ? (JSON.parse(row.flight_json) as {
+        legs?: LegDraft[];
+        baggage?: string;
+        bookingNote?: string;
+        bookingUrl?: string;
+        bookingWhere?: string;
+        commission?: boolean;
+      })
+    : null;
   const stay = row.stay_json ? (JSON.parse(row.stay_json) as Record<string, unknown>) : null;
   const parseLines = (json: string | null): LineDraft[] =>
-    json ? (JSON.parse(json) as { name?: string; detail?: string }[]).map((item) => ({ name: item.name ?? '', detail: item.detail ?? '' })) : [];
+    json
+      ? (JSON.parse(json) as { name?: string; detail?: string; bookingUrl?: string; commission?: boolean }[]).map(
+          (item) => ({
+            name: item.name ?? '',
+            detail: item.detail ?? '',
+            bookingUrl: item.bookingUrl ?? '',
+            commission: item.commission ?? false,
+          }),
+        )
+      : [];
 
   return {
     key: nextKey(),
@@ -114,6 +144,9 @@ function fromRow(row: QuoteOptionRow): OptionDraft {
         : [emptyLeg('ida'), emptyLeg('vuelta')],
     baggage: flight?.baggage ?? '',
     bookingNote: flight?.bookingNote ?? '',
+    flightUrl: flight?.bookingUrl ?? '',
+    flightWhere: flight?.bookingWhere ?? '',
+    flightCommission: flight?.commission ?? false,
     stayName: String(stay?.name ?? ''),
     stayCategory: String(stay?.category ?? ''),
     stayArea: String(stay?.area ?? ''),
@@ -122,6 +155,9 @@ function fromRow(row: QuoteOptionRow): OptionDraft {
     stayRating: String(stay?.rating ?? ''),
     stayCancellation: String(stay?.cancellation ?? ''),
     stayNote: String(stay?.note ?? ''),
+    stayUrl: String(stay?.bookingUrl ?? ''),
+    stayWhere: String(stay?.bookingWhere ?? ''),
+    stayCommission: Boolean(stay?.commission ?? false),
     transfers: parseLines(row.transfers_json),
     activities: parseLines(row.activities_json),
     priceFlights: row.price_flights,
@@ -135,8 +171,67 @@ function fromRow(row: QuoteOptionRow): OptionDraft {
   };
 }
 
+/** Los campos vacíos no viajan al servidor: el esquema los quiere ausentes, no en blanco. */
+const cleanLine = (line: LineDraft) => ({
+  name: line.name,
+  detail: line.detail || undefined,
+  bookingUrl: line.bookingUrl || undefined,
+  commission: line.commission,
+});
+
 const totalOf = (option: OptionDraft) =>
   option.priceFlights + option.priceStay + option.priceTransfers + option.priceActivities + option.priceOther + option.priceFee;
+
+/** Dónde reserva el cliente esta partida y si nos deja comisión. */
+function BookingLinkFields({
+  legend,
+  where,
+  url,
+  commission,
+  onChange,
+}: {
+  legend: string;
+  where: string;
+  url: string;
+  commission: boolean;
+  onChange: (changes: { where?: string; url?: string; commission?: boolean }) => void;
+}) {
+  const invalid = url.trim() !== '' && !/^https?:\/\//i.test(url.trim());
+  return (
+    <div className="mt-3 rounded-xl border border-dashed border-ink-300 bg-ink-50/60 p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-ink-500">{legend}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Input
+          className="h-10 w-44 text-sm"
+          placeholder="Proveedor (Booking…)"
+          aria-label={`${legend}: proveedor`}
+          value={where}
+          onChange={(event) => onChange({ where: event.target.value })}
+        />
+        <Input
+          className="h-10 min-w-64 flex-1 text-sm"
+          placeholder="Enlace de afiliado (https://…)"
+          aria-label={`${legend}: enlace`}
+          invalid={invalid}
+          value={url}
+          onChange={(event) => onChange({ url: event.target.value })}
+        />
+        <label className="flex h-10 items-center gap-2 whitespace-nowrap px-1 text-sm text-ink-600">
+          <input
+            type="checkbox"
+            className="size-4 accent-[var(--color-brand-600)]"
+            checked={commission}
+            onChange={(event) => onChange({ commission: event.target.checked })}
+          />
+          nos deja comisión
+        </label>
+      </div>
+      {invalid ? (
+        <p className="mt-1.5 text-sm text-coral-600">El enlace tiene que empezar por http:// o https://</p>
+      ) : null}
+    </div>
+  );
+}
 
 export function QuoteBuilder({
   requestId,
@@ -213,6 +308,9 @@ export function QuoteBuilder({
           .map((leg) => ({ ...leg, note: leg.note || undefined })),
         baggage: option.baggage,
         bookingNote: option.bookingNote || undefined,
+        bookingUrl: option.flightUrl || undefined,
+        bookingWhere: option.flightWhere || undefined,
+        commission: option.flightCommission,
       },
       stay: {
         name: option.stayName,
@@ -223,9 +321,12 @@ export function QuoteBuilder({
         rating: option.stayRating || undefined,
         cancellation: option.stayCancellation || undefined,
         note: option.stayNote || undefined,
+        bookingUrl: option.stayUrl || undefined,
+        bookingWhere: option.stayWhere || undefined,
+        commission: option.stayCommission,
       },
-      transfers: option.transfers.filter((line) => line.name),
-      activities: option.activities.filter((line) => line.name),
+      transfers: option.transfers.filter((line) => line.name).map(cleanLine),
+      activities: option.activities.filter((line) => line.name).map(cleanLine),
       priceFlights: option.priceFlights,
       priceStay: option.priceStay,
       priceTransfers: option.priceTransfers,
@@ -462,6 +563,19 @@ export function QuoteBuilder({
                     onChange={(event) => patch(option.key, { bookingNote: event.target.value })}
                   />
                 </div>
+                <BookingLinkFields
+                  legend="Dónde reserva el vuelo"
+                  where={option.flightWhere}
+                  url={option.flightUrl}
+                  commission={option.flightCommission}
+                  onChange={(changes) =>
+                    patch(option.key, {
+                      ...(changes.where !== undefined ? { flightWhere: changes.where } : {}),
+                      ...(changes.url !== undefined ? { flightUrl: changes.url } : {}),
+                      ...(changes.commission !== undefined ? { flightCommission: changes.commission } : {}),
+                    })
+                  }
+                />
               </div>
 
               {/* Alojamiento */}
@@ -501,6 +615,19 @@ export function QuoteBuilder({
                     onChange={(event) => patch(option.key, { stayNote: event.target.value })}
                   />
                 </div>
+                <BookingLinkFields
+                  legend="Dónde reserva el alojamiento"
+                  where={option.stayWhere}
+                  url={option.stayUrl}
+                  commission={option.stayCommission}
+                  onChange={(changes) =>
+                    patch(option.key, {
+                      ...(changes.where !== undefined ? { stayWhere: changes.where } : {}),
+                      ...(changes.url !== undefined ? { stayUrl: changes.url } : {}),
+                      ...(changes.commission !== undefined ? { stayCommission: changes.commission } : {}),
+                    })
+                  }
+                />
               </div>
 
               {/* Traslados y actividades */}
@@ -537,6 +664,30 @@ export function QuoteBuilder({
                             patch(option.key, { [field]: lines } as Partial<OptionDraft>);
                           }}
                         />
+                        <Input
+                          className="h-10 min-w-56 flex-1 text-sm"
+                          placeholder="Enlace de reserva (https://…)"
+                          aria-label={`${legend}: enlace de reserva`}
+                          value={line.bookingUrl}
+                          onChange={(event) => {
+                            const lines = [...option[field]];
+                            lines[lineIndex] = { ...line, bookingUrl: event.target.value };
+                            patch(option.key, { [field]: lines } as Partial<OptionDraft>);
+                          }}
+                        />
+                        <label className="flex h-10 items-center gap-2 whitespace-nowrap px-1 text-sm text-ink-600">
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-[var(--color-brand-600)]"
+                            checked={line.commission}
+                            onChange={(event) => {
+                              const lines = [...option[field]];
+                              lines[lineIndex] = { ...line, commission: event.target.checked };
+                              patch(option.key, { [field]: lines } as Partial<OptionDraft>);
+                            }}
+                          />
+                          comisión
+                        </label>
                         <button
                           type="button"
                           className="h-10 rounded-xl border border-ink-200 px-3 text-sm text-ink-500 hover:bg-ink-100"
@@ -555,7 +706,7 @@ export function QuoteBuilder({
                       className="rounded-xl border border-dashed border-ink-300 px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-100"
                       onClick={() =>
                         patch(option.key, {
-                          [field]: [...option[field], { name: '', detail: '' }],
+                          [field]: [...option[field], { name: '', detail: '', bookingUrl: '', commission: false }],
                         } as Partial<OptionDraft>)
                       }
                     >

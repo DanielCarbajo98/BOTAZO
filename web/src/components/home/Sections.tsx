@@ -7,6 +7,7 @@ import { faqs } from '@/content/faq';
 import { testimonials } from '@/content/testimonials';
 import { destinations } from '@/lib/catalog';
 import { pricing, site } from '@/config/site';
+import { isAdvisor, modeCopy, quoteNoun } from '@/config/mode';
 import { eur } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
@@ -65,19 +66,19 @@ const steps = [
     n: '02',
     title: 'Buscamos de verdad',
     body: 'Cruzamos aeropuertos, calendario completo, compañías, combinaciones de billetes y hoteles en varios canales. Con equipaje y traslados incluidos en la cuenta.',
-    detail: 'Entre 1 y 3 horas de trabajo por presupuesto',
+    detail: `Entre 1 y 3 horas de trabajo por ${quoteNoun}`,
   },
   {
     n: '03',
-    title: 'Te enviamos tres opciones',
-    body: 'La más barata, la equilibrada y la cómoda. Con desglose línea por línea, lo que ganas y lo que pierdes en cada una, y nuestra recomendación.',
-    detail: 'Presupuesto gratis · sin compromiso · válido varios días',
+    title: isAdvisor ? 'Te mandamos tres opciones' : 'Te enviamos tres opciones',
+    body: `La más barata, la equilibrada y la cómoda. Con desglose línea por línea${isAdvisor ? ', el enlace de cada reserva' : ''}, lo que ganas y lo que pierdes en cada una, y nuestra recomendación.`,
+    detail: `${isAdvisor ? 'Plan gratis' : 'Presupuesto gratis'} · sin compromiso · válido varios días`,
   },
   {
     n: '04',
-    title: 'Reservamos y te acompañamos',
-    body: 'Si te encaja, lo reservamos todo y te mandamos los localizadores a tu nombre. Seguimos vigilando el precio y estamos en tu WhatsApp durante el viaje.',
-    detail: 'Radar de precios · soporte durante el viaje',
+    title: modeCopy.finalStep.title,
+    body: modeCopy.finalStep.body,
+    detail: modeCopy.finalStep.detail,
   },
 ];
 
@@ -198,13 +199,7 @@ const comparisonRows: { feature: string; alone: string; ota: string; agency: str
     agency: 'A veces',
     us: 'Desglosado desde el principio',
   },
-  {
-    feature: 'Sabes cuánto se lleva la agencia',
-    alone: '—',
-    ota: 'No',
-    agency: 'No',
-    us: 'Sí, línea aparte',
-  },
+  modeCopy.comparisonRow,
   {
     feature: 'Opciones alternativas para comparar',
     alone: 'Las que abras',
@@ -280,6 +275,18 @@ export function Comparison() {
 
 /* ------------------------------------------------------------------ */
 
+export function WhoBooks() {
+  return (
+    <Section tone="sand">
+      <div data-reveal className="mx-auto max-w-3xl rounded-card border border-ink-100 bg-white p-8 md:p-10">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">Cómo funciona la reserva</p>
+        <h2 className="mt-3 text-2xl md:text-3xl">{modeCopy.whoBooks.title}</h2>
+        <p className="mt-4 text-[1.02rem] leading-relaxed text-ink-700">{modeCopy.whoBooks.body}</p>
+      </div>
+    </Section>
+  );
+}
+
 export function PricingTeaser() {
   return (
     <Section tone="white" id="precios">
@@ -305,12 +312,7 @@ export function PricingTeaser() {
               Mínimo {eur(tier.minPerBooking)} por reserva · menores de {pricing.childAgeLimit} años, mitad de tarifa
             </p>
             <ul className="mt-5 space-y-2.5 text-sm text-ink-600">
-              {[
-                'Presupuesto con tres opciones comparadas',
-                'Búsqueda de vuelos, hotel, traslados y actividades',
-                'Gestión completa de las reservas',
-                'Radar de precios y soporte durante el viaje',
-              ].map((item) => (
+              {modeCopy.cardHighlights.map((item) => (
                 <li key={item} className="flex gap-2.5">
                   <span aria-hidden className="mt-0.5 text-brand-600">
                     ✓
@@ -420,7 +422,7 @@ export function DestinationIdeas() {
                 .
               </p>
               <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 transition-transform group-hover:translate-x-0.5">
-                Pedir presupuesto
+                {modeCopy.ctaShort}
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
@@ -482,7 +484,7 @@ export function FinalCta() {
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <ButtonLink href="/presupuesto" size="lg" variant="coral">
-            Pedir presupuesto gratis
+            {modeCopy.ctaShort}
           </ButtonLink>
           <ButtonLink
             href={`https://wa.me/${site.contact.whatsapp}`}

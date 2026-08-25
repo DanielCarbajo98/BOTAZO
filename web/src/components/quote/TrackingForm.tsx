@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { FieldError, Input, Label } from '@/components/ui/Field';
+import { modeCopy } from '@/config/mode';
 
 export function TrackingForm() {
   const router = useRouter();
@@ -67,7 +68,7 @@ export function TrackingForm() {
       <FieldError>{error}</FieldError>
 
       <Button type="submit" size="lg" className="mt-6 w-full" disabled={loading}>
-        {loading ? 'Buscando…' : 'Ver mi presupuesto'}
+        {loading ? 'Buscando…' : modeCopy.ctaSecondary}
       </Button>
       <p className="mt-3 text-xs leading-relaxed text-ink-400">
         Por seguridad generamos un enlace nuevo cada vez, así que el anterior dejará de funcionar.

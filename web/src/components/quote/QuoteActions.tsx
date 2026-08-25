@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Field';
+import { modeCopy } from '@/config/mode';
 
 type Mode = 'idle' | 'changes' | 'sending' | 'done';
 
@@ -50,9 +51,7 @@ export function QuoteActions({
     return (
       <div className="rounded-card border border-brand-200 bg-brand-50 p-6 text-center">
         <p className="font-display text-lg font-semibold text-brand-900">Respuesta registrada</p>
-        <p className="mt-1.5 text-sm text-ink-600">
-          Nos ponemos con ello ahora mismo y te escribimos con los siguientes pasos.
-        </p>
+        <p className="mt-1.5 text-sm text-ink-600">{modeCopy.quote.done}</p>
       </div>
     );
   }
@@ -60,10 +59,7 @@ export function QuoteActions({
   return (
     <div className="rounded-card border border-ink-100 bg-white p-6">
       <h3 className="font-display text-xl font-semibold text-ink-900">¿Qué te parece?</h3>
-      <p className="mt-1.5 text-sm text-ink-600">
-        Aceptar no implica pagar todavía: te confirmamos disponibilidad y te explicamos cómo se abona antes de
-        reservar nada.
-      </p>
+      <p className="mt-1.5 text-sm text-ink-600">{modeCopy.quote.ctaHelp}</p>
 
       {error ? (
         <p role="alert" className="mt-4 rounded-xl bg-coral-50 px-4 py-3 text-sm text-coral-700">
@@ -92,7 +88,7 @@ export function QuoteActions({
       ) : (
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Button size="lg" variant="coral" disabled={mode === 'sending'} onClick={() => void send('aceptar')}>
-            {mode === 'sending' ? 'Enviando…' : 'Me quedo con una opción'}
+            {mode === 'sending' ? 'Enviando…' : modeCopy.quote.ctaPrimary}
           </Button>
           <Button size="lg" variant="outline" onClick={() => setMode('changes')}>
             Pedir cambios

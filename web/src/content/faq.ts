@@ -1,11 +1,14 @@
+import { isAdvisor, modeCopy, quoteNoun } from '@/config/mode';
+
 export type FaqItem = { question: string; answer: string; group: string };
 
 export const faqs: FaqItem[] = [
   {
     group: 'Cómo trabajamos',
-    question: '¿Cuánto cuesta pedir un presupuesto?',
-    answer:
-      'Nada. Rellenas el formulario, lo estudiamos y te enviamos la propuesta sin ningún compromiso. Solo cobramos la tarifa de gestión si decides reservar con nosotros.',
+    question: `¿Cuánto cuesta pedir un ${quoteNoun}?`,
+    answer: isAdvisor
+      ? 'Nada. Rellenas el formulario, lo estudiamos y te enviamos la propuesta sin ningún compromiso. Solo cobramos nuestros honorarios si decides seguir adelante con el plan.'
+      : 'Nada. Rellenas el formulario, lo estudiamos y te enviamos la propuesta sin ningún compromiso. Solo cobramos la tarifa de gestión si decides reservar con nosotros.',
   },
   {
     group: 'Cómo trabajamos',
@@ -22,14 +25,15 @@ export const faqs: FaqItem[] = [
   {
     group: 'Precio',
     question: '¿Cómo ganáis dinero si decís que sois más baratos?',
-    answer:
-      'De tres sitios, y no hay un cuarto. Uno: la tarifa fija por persona que ves en el presupuesto, en una línea aparte. Dos: la comisión que algunos hoteles, seguros y empresas de actividades nos pagan por traerles la reserva, que sale de su margen y no de tu bolsillo. Y tres: si después de reservar el precio baja y rehacemos la reserva, nos quedamos una cuarta parte de ese ahorro. Nada de eso encarece tu viaje, y todo aparece detallado en el presupuesto.',
+    answer: isAdvisor
+      ? 'De dos sitios, y no hay un tercero. Uno: nuestros honorarios de asesoramiento, en una línea aparte del plan. Y dos: cuando reservas por los enlaces que te pasamos, algunos hoteles, seguros y empresas de actividades nos pagan una comisión. Sale de su margen, no de tu bolsillo: pagas exactamente el mismo precio que si entraras por tu cuenta, y puedes comprobarlo. Es lo que nos permite dedicarle horas de verdad a cada plan.'
+      : 'De tres sitios, y no hay un cuarto. Uno: la tarifa fija por persona que ves en el presupuesto, en una línea aparte. Dos: la comisión que algunos hoteles, seguros y empresas de actividades nos pagan por traerles la reserva, que sale de su margen y no de tu bolsillo. Y tres: si después de reservar el precio baja y rehacemos la reserva, nos quedamos una cuarta parte de ese ahorro. Nada de eso encarece tu viaje, y todo aparece detallado en el presupuesto.',
   },
   {
     group: 'Precio',
     question: 'Si os pagan comisión los hoteles, ¿me vais a colocar el que más os pague?',
     answer:
-      'No, y puedes comprobarlo: en el presupuesto marcamos qué reservas nos generan comisión y cuáles no. Como nuestra tarifa es fija y no un porcentaje, venderte algo más caro no nos hace ganar más. Si el mejor hotel para ti es uno que no nos paga nada, es el que te vamos a recomendar.',
+      'No, y puedes comprobarlo de dos formas: en la propuesta marcamos qué reservas nos generan comisión y cuáles no, y puedes contrastar cualquier precio entrando por tu cuenta sin nuestro enlace. Como nuestros honorarios son fijos y no un porcentaje, recomendarte algo más caro no nos hace ganar más. Si la mejor opción para ti es una que no nos paga nada, es la que te vamos a recomendar.',
   },
   {
     group: 'Precio',
@@ -51,9 +55,8 @@ export const faqs: FaqItem[] = [
   },
   {
     group: 'Seguridad',
-    question: '¿Con quién reservo realmente, con vosotros o con la aerolínea?',
-    answer:
-      'Te decimos siempre quién emite cada reserva. Cuando reservamos nosotros, recibes los localizadores a tu nombre y puedes gestionarlos directamente con la compañía. Nunca vas a tener una reserva "opaca" que solo podamos tocar nosotros.',
+    question: modeCopy.faqWhoBooks.question,
+    answer: modeCopy.faqWhoBooks.answer,
   },
   {
     group: 'Seguridad',
@@ -82,7 +85,8 @@ export const faqs: FaqItem[] = [
   {
     group: 'El viaje',
     question: '¿Y si el precio baja después de reservar?',
-    answer:
-      'Seguimos vigilándolo. Si la reserva permite cambio o cancelación gratuita y encontramos algo mejor, la rehacemos: el 75 % de ese ahorro es para ti y el 25 % para nosotros. Si no encontramos nada mejor, vigilarlo no te cuesta nada. Cuando la tarifa no admite cambios te lo decimos de antemano.',
+    answer: isAdvisor
+      ? 'Seguimos vigilándolo. Si baja y tu reserva admite cambio o cancelación gratuita, te avisamos y te decimos exactamente qué hacer para aprovecharlo. El ahorro es íntegramente tuyo. Cuando la tarifa no admite cambios te lo decimos de antemano, antes de que reserves.'
+      : 'Seguimos vigilándolo. Si la reserva permite cambio o cancelación gratuita y encontramos algo mejor, la rehacemos: el 75 % de ese ahorro es para ti y el 25 % para nosotros. Si no encontramos nada mejor, vigilarlo no te cuesta nada. Cuando la tarifa no admite cambios te lo decimos de antemano.',
   },
 ];

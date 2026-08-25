@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
-import { Comparison, FinalCta, HowItWorks, WhyCheaper } from '@/components/home/Sections';
+import { Comparison, FinalCta, HowItWorks, WhoBooks, WhyCheaper } from '@/components/home/Sections';
 import { Section, SectionHeading } from '@/components/ui/Card';
 import { site } from '@/config/site';
+import { isAdvisor, quoteNoun } from '@/config/mode';
 
 export const metadata: Metadata = {
   title: 'Cómo funciona',
   description:
-    'Nos cuentas tu viaje, buscamos durante horas, te enviamos tres opciones con el desglose completo y reservamos si te encaja. Presupuesto gratis y sin compromiso.',
+    'Nos cuentas tu viaje, buscamos durante horas y te enviamos tres opciones con el desglose completo. Gratis y sin compromiso.',
   alternates: { canonical: '/como-funciona' },
 };
 
@@ -21,7 +22,7 @@ const promises = [
   },
   {
     title: 'Todo por escrito',
-    body: 'Cada presupuesto lleva el desglose, las condiciones de cancelación de cada reserva y qué pasa si algo sale mal. Nada de "ya lo hablaremos".',
+    body: `Cada ${quoteNoun} lleva el desglose, las condiciones de cancelación de cada reserva y qué pasa si algo sale mal. Nada de "ya lo hablaremos".`,
   },
 ];
 
@@ -42,6 +43,7 @@ export default function ComoFuncionaPage() {
       </Section>
 
       <HowItWorks />
+      <WhoBooks />
       <WhyCheaper />
 
       <Section tone="white">
@@ -55,9 +57,9 @@ export default function ComoFuncionaPage() {
           ))}
         </div>
         <p className="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-ink-500">
-          {site.name} actúa como agencia de viajes: intermediamos y gestionamos las reservas con proveedores
-          (aerolíneas, hoteles, receptivos). Las condiciones de cada servicio son las del proveedor y te las
-          entregamos con el presupuesto.
+          {isAdvisor
+            ? `${site.name} presta un servicio de asesoramiento: investigamos y te decimos qué reservar y dónde, pero la reserva la haces tú directamente con cada proveedor y sus condiciones son las que se aplican. No vendemos viajes combinados.`
+            : `${site.name} actúa como agencia de viajes: intermediamos y gestionamos las reservas con proveedores (aerolíneas, hoteles, receptivos). Las condiciones de cada servicio son las del proveedor y te las entregamos con el presupuesto.`}
         </p>
       </Section>
 

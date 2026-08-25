@@ -7,6 +7,7 @@ import { BriefSummary } from '@/components/quote/BriefSummary';
 import { QuoteActions } from '@/components/quote/QuoteActions';
 import { QuoteView } from '@/components/quote/QuoteView';
 import { site } from '@/config/site';
+import { isAdvisor, quoteNoun } from '@/config/mode';
 import { repo, REQUEST_STATUSES, STATUS_META, type RequestStatus } from '@/lib/repository';
 import { eur, formatDateTime } from '@/lib/utils';
 
@@ -49,7 +50,7 @@ export default async function SolicitudPage({
             </p>
             <h1 className="mt-3 text-2xl md:text-3xl">Solicitud recibida, {request.contact_name.split(' ')[0]}</h1>
             <p className="mt-3 max-w-2xl leading-relaxed text-ink-700">
-              Ya estamos con ella. Te enviaremos el presupuesto por{' '}
+              Ya estamos con ella. Te enviaremos el {quoteNoun} por{' '}
               <strong>{request.contact_channel === 'email' ? 'email' : request.contact_channel}</strong> en menos de{' '}
               {site.contact.responseTimeHours} horas. Guarda este enlace: es tu acceso privado a todo el proceso.
             </p>
@@ -114,8 +115,8 @@ export default async function SolicitudPage({
           <section className="rounded-card border border-ink-100 bg-white p-6 md:p-8">
             <h2 className="text-xl">Estamos buscando</h2>
             <p className="mt-2 max-w-2xl leading-relaxed text-ink-600">
-              Un agente está comparando aeropuertos, fechas y alojamientos con lo que nos contaste. Cuando tengamos
-              las tres opciones aparecerán aquí y te avisaremos.
+              Estamos comparando aeropuertos, fechas y alojamientos con lo que nos contaste. Cuando tengamos las
+              tres opciones aparecerán aquí{isAdvisor ? ', cada una con su enlace de reserva,' : ''} y te avisaremos.
             </p>
             {request.estimate ? (
               <div className="mt-6 rounded-2xl bg-sand-100 p-5">

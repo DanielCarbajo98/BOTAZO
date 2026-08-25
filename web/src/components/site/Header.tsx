@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Logo } from '@/components/site/Logo';
 import { ButtonLink } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { modeCopy } from '@/config/mode';
 
 const links = [
   { href: '/como-funciona', label: 'Cómo funciona' },
@@ -72,10 +73,10 @@ export function Header() {
 
         <div className="hidden items-center gap-2 lg:flex">
           <ButtonLink href="/seguimiento" variant="ghost" size="sm">
-            Ver mi presupuesto
+            {modeCopy.ctaSecondary}
           </ButtonLink>
           <ButtonLink href="/presupuesto" variant="primary" size="sm">
-            Pedir presupuesto gratis
+            {modeCopy.ctaShort}
           </ButtonLink>
         </div>
 
@@ -107,10 +108,10 @@ export function Header() {
             ))}
             <div className="mt-3 flex flex-col gap-2">
               <ButtonLink href="/presupuesto" size="lg">
-                Pedir presupuesto gratis
+                {modeCopy.ctaShort}
               </ButtonLink>
               <ButtonLink href="/seguimiento" variant="outline" size="lg">
-                Ver mi presupuesto
+                {modeCopy.ctaSecondary}
               </ButtonLink>
             </div>
           </nav>

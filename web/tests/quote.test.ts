@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { optionSaving, optionTotal, parseFlight, parseLines, parseStay, quoteInputSchema } from '@/lib/quote';
+import {
+  bookingUrlSchema,
+  isSafeUrl,
+  optionSaving,
+  optionTotal,
+  parseFlight,
+  parseLines,
+  parseStay,
+  quoteInputSchema,
+  urlHost,
+} from '@/lib/quote';
 
 const prices = {
   price_flights: 300,
@@ -65,5 +75,50 @@ describe('quoteInputSchema', () => {
     expect(
       quoteInputSchema.safeParse({ ...base, options: [{ ...base.options[0], priceFlights: -5 }] }).success,
     ).toBe(false);
+  });
+});
+
+describe('enlaces de reserva', () => {
+  it('acepta http y https', () => {
+    expect(bookingUrlSchema.safeParse('https://www.booking.com/x?aid=123').success).toBe(true);
+    expect(bookingUrlSchema.safeParse('http://ejemplo.com').success).toBe(true);
+    expect(bookingUrlSchema.safeParse('').success).toBe(true);
+  });
+
+  it('rechaza esquemas peligrosos', () => {
+    for (const value of ['javascript:alert(1)', 'data:text/html,<script>', 'file:///etc/passwd', 'ftp://x.com']) {
+      expect(bookingUrlSchema.safeParse(value).success).toBe(false);
+    }
+  });
+
+  it('isSafeUrl es la segunda barrera al pintar', () => {
+    expect(isSafeUrl('https://civitatis.com/a')).toBe(true);
+    expect(isSafeUrl('javascript:alert(1)')).toBe(false);
+    expect(isSafeUrl('no es una url')).toBe(false);
+    expect(isSafeUrl(null)).toBe(false);
+    expect(isSafeUrl(undefined)).toBe(false);
+  });
+
+  it('muestra el dominio sin www para que el cliente sepa a dónde va', () => {
+    expect(urlHost('https://www.booking.com/hotel/es/x.html?aid=9')).toBe('booking.com');
+    expect(urlHost('https://civitatis.com/es/roma')).toBe('civitatis.com');
+    expect(urlHost('roto')).toBe('');
+  });
+
+  it('el enlace y la marca de comisión sobreviven al guardado', () => {
+    const parsed = quoteInputSchema.safeParse({
+      title: 'Roma',
+      options: [
+        {
+          name: 'Equilibrada',
+          angle: 'balanced',
+          stay: { name: 'Hotel X', bookingUrl: 'https://booking.com/x?aid=1', commission: true },
+          activities: [{ name: 'Coliseo', bookingUrl: 'https://civitatis.com/x', commission: true }],
+        },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.options[0]?.stay?.bookingUrl).toBe('https://booking.com/x?aid=1');
+    expect(parsed.data?.options[0]?.activities[0]?.commission).toBe(true);
   });
 });
