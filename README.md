@@ -209,3 +209,10 @@ equipo, replay de Elo sobre todos los finalizados de la temporada y devuelve:
 - Sin promesas de % de aciertos ni ROI.
 - Datos de fuentes públicas y gratuitas, respetando rate limits.
 - Detectamos valor, no predecimos el futuro.
+
+---
+
+## Otros proyectos de este repositorio
+
+- **`web/`** — *Viajalisto*, la web de la agencia de viajes low cost
+  (Next.js + TypeScript). Ver [`web/README.md`](web/README.md).

@@ -1,0 +1,197 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------ *
+ * Sistema de diseño
+ * ------------------------------------------------------------------ */
+@theme {
+  /* Tinta: azul noche cálido, para textos y fondos oscuros */
+  --color-ink-950: #060b14;
+  --color-ink-900: #0b1220;
+  --color-ink-800: #121c2e;
+  --color-ink-700: #1c2942;
+  --color-ink-600: #2b3b58;
+  --color-ink-500: #44567a;
+  --color-ink-400: #6b7c9d;
+  --color-ink-300: #9aa8c2;
+  --color-ink-200: #c6cfdf;
+  --color-ink-100: #e4e9f2;
+  --color-ink-50: #f2f5fa;
+
+  /* Marca: verde azulado. Confianza + frescura, sin el azul corporativo de todos */
+  --color-brand-950: #032f2c;
+  --color-brand-900: #064e46;
+  --color-brand-800: #07655a;
+  --color-brand-700: #0a8375;
+  --color-brand-600: #0ea192;
+  --color-brand-500: #14bfae;
+  --color-brand-400: #4bd6c8;
+  --color-brand-300: #86e6dc;
+  --color-brand-200: #b9f2ec;
+  --color-brand-100: #dcf8f5;
+  --color-brand-50: #f0fdfb;
+
+  /* Acento: coral. Reservado para el AHORRO y las llamadas a la acción calientes */
+  --color-coral-700: #c2410c;
+  --color-coral-600: #e5522a;
+  --color-coral-500: #ff6b4a;
+  --color-coral-400: #ff8f74;
+  --color-coral-100: #ffe8e1;
+  --color-coral-50: #fff5f2;
+
+  /* Ámbar: avisos y sellos */
+  --color-amber-brand: #f5b544;
+
+  /* Arena: fondo cálido, evita el blanco clínico */
+  --color-sand-50: #fdfbf7;
+  --color-sand-100: #faf6ee;
+  --color-sand-200: #f2ebdd;
+  --color-sand-300: #e6dcc7;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, 'Times New Roman', serif;
+
+  --radius-card: 1.25rem;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 1px 2px rgb(11 18 32 / 0.04), 0 8px 24px -12px rgb(11 18 32 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(11 18 32 / 0.05), 0 20px 48px -20px rgb(11 18 32 / 0.22);
+  --shadow-ring: 0 0 0 1px rgb(11 18 32 / 0.06);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 2.4s linear infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Base
+ * ------------------------------------------------------------------ */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    background-color: var(--color-sand-50);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Foco visible y consistente en todo el sitio: requisito de accesibilidad */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-700);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-brand-200);
+    color: var(--color-ink-900);
+  }
+
+  /* Oculta los spinners de los input[type=number] */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Utilidades de proyecto
+ * ------------------------------------------------------------------ */
+@utility container-page {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 76rem;
+  padding-inline: 1.25rem;
+  @media (width >= 768px) {
+    padding-inline: 2rem;
+  }
+}
+
+@utility text-balance-tight {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+/* Degradado sutil de fondo para secciones oscuras */
+@utility bg-night {
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% -10%, rgb(20 191 174 / 0.22), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 0%, rgb(255 107 74 / 0.14), transparent 55%),
+    linear-gradient(180deg, var(--color-ink-900), var(--color-ink-950));
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(11 18 32 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(11 18 32 / 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+@utility skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  &:focus {
+    left: 1rem;
+    top: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-ink-900);
+    color: white;
+    border-radius: 0.75rem;
+  }
+}

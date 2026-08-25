@@ -1,0 +1,76 @@
+export type FaqItem = { question: string; answer: string; group: string };
+
+export const faqs: FaqItem[] = [
+  {
+    group: 'Cómo trabajamos',
+    question: '¿Cuánto cuesta pedir un presupuesto?',
+    answer:
+      'Nada. Rellenas el formulario, lo estudiamos y te enviamos la propuesta sin ningún compromiso. Solo cobramos la tarifa de gestión si decides reservar con nosotros.',
+  },
+  {
+    group: 'Cómo trabajamos',
+    question: '¿Cuánto tardáis en contestar?',
+    answer:
+      'Menos de 24 horas laborables para escapadas y hasta 48 para viajes largos o multidestino, porque hay que comparar muchas más combinaciones. Si tienes prisa, dínoslo en el formulario y lo priorizamos.',
+  },
+  {
+    group: 'Cómo trabajamos',
+    question: '¿Y si no me gusta ninguna de las opciones?',
+    answer:
+      'Nos dices qué cambiarías y preparamos una segunda ronda sin coste. Si aun así no encaja, no pasa nada: no has pagado nada y ahí queda la cosa.',
+  },
+  {
+    group: 'Precio',
+    question: '¿Cómo ganáis dinero si decís que sois más baratos?',
+    answer:
+      'Con una tarifa fija por persona que ves en el presupuesto, separada del precio del viaje. No metemos comisión dentro del vuelo ni del hotel. Ganamos cuando te ahorramos más de lo que cobramos; por eso podemos permitirnos la garantía de "si no ahorras, no pagas".',
+  },
+  {
+    group: 'Precio',
+    question: '¿Los precios del presupuesto son los finales?',
+    answer:
+      'Sí, con todo incluido: tasas, equipaje que hayas pedido, traslados y nuestra tarifa. Lo único que puede moverse es el precio del vuelo o del hotel si tardas en confirmar, porque no somos nosotros quienes lo fijamos. Por eso cada presupuesto lleva una fecha de validez.',
+  },
+  {
+    group: 'Precio',
+    question: '¿Puedo pagar a plazos?',
+    answer:
+      'En muchos casos sí: bloqueamos el vuelo y dejamos el hotel con pago en destino o cancelación gratuita, de modo que el desembolso se reparte. Te lo indicamos en el presupuesto cuando es posible.',
+  },
+  {
+    group: 'Seguridad',
+    question: '¿Con quién reservo realmente, con vosotros o con la aerolínea?',
+    answer:
+      'Te decimos siempre quién emite cada reserva. Cuando reservamos nosotros, recibes los localizadores a tu nombre y puedes gestionarlos directamente con la compañía. Nunca vas a tener una reserva "opaca" que solo podamos tocar nosotros.',
+  },
+  {
+    group: 'Seguridad',
+    question: '¿Qué pasa si se cancela mi vuelo estando de viaje?',
+    answer:
+      'Nos escribes por WhatsApp y te ayudamos a reubicarte. Te explicamos además qué compensación te corresponde por el Reglamento (CE) 261/2004 y cómo reclamarla, que es dinero que mucha gente pierde por no saber que existe.',
+  },
+  {
+    group: 'Seguridad',
+    question: '¿Qué hacéis con mis datos?',
+    answer:
+      'Los usamos solo para preparar tu presupuesto y gestionar tu viaje. No los vendemos ni los cedemos a terceros con fines comerciales, y puedes pedirnos que los borremos cuando quieras. Está todo detallado en la política de privacidad.',
+  },
+  {
+    group: 'El viaje',
+    question: '¿Trabajáis con vuelos con escalas larguísimas o horarios imposibles?',
+    answer:
+      'Solo si tú nos dices que te compensa. En el formulario eliges si quieres vuelo directo, si aceptas una escala o si te da igual con tal de que sea lo más barato. Respetamos esa elección.',
+  },
+  {
+    group: 'El viaje',
+    question: '¿Podéis organizar viajes con niños o con movilidad reducida?',
+    answer:
+      'Sí. En el formulario hay un apartado para necesidades especiales: cunas, sillas, habitaciones familiares, accesibilidad sin escaleras o asistencia en el aeropuerto. Lo tenemos en cuenta al elegir vuelos y hoteles.',
+  },
+  {
+    group: 'El viaje',
+    question: '¿Y si el precio baja después de reservar?',
+    answer:
+      'Seguimos vigilándolo. Si la reserva permite cambio o cancelación gratuita y encontramos algo mejor, la rehacemos y el ahorro es tuyo. Cuando la tarifa no admite cambios te lo decimos de antemano.',
+  },
+];
