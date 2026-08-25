@@ -89,6 +89,18 @@ export const pricing = {
   savingShare: { client: 0.75, agency: 0.25 },
   /** Comisión máxima que algunos proveedores nos pagan. No la paga el cliente. */
   supplierCommissionMax: 7,
+  /**
+   * Devolución sin preguntas.
+   *
+   * Las dos condiciones son objetivas y comprobables, que es lo que hace que la
+   * política se sostenga: o estás dentro del plazo o no, y o has pulsado un
+   * enlace de reserva o no. Nada queda al criterio de nadie.
+   */
+  refund: {
+    hours: 48,
+    /** Pulsar un enlace es usar el trabajo: a partir de ahí no hay devolución. */
+    voidOnClick: true,
+  },
   guarantee:
     'Si no conseguimos bajar el mejor precio que encuentres tú por tu cuenta, no pagas la tarifa.',
 } as const;

@@ -10,6 +10,7 @@ import {
   isUnlocked,
   quoteInputSchema,
   redactOption,
+  refundEligibility,
   urlHost,
 } from '@/lib/quote';
 
@@ -219,5 +220,56 @@ describe('muro de pago', () => {
     expect(isUnlocked({ unlock_fee: 38, unlock_status: 'pagado' })).toBe(true);
     expect(isUnlocked({ unlock_fee: 38, unlock_status: 'exento' })).toBe(true);
     expect(isUnlocked({ unlock_fee: 38, unlock_status: 'pendiente' })).toBe(false);
+  });
+});
+
+describe('devolución sin preguntas', () => {
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+
+  it('dentro de plazo y sin clics: se devuelve', () => {
+    const result = refundEligibility({ unlock_status: 'pagado', paid_at: hoursAgo(2) }, 0);
+    expect(result.eligible).toBe(true);
+    if (result.eligible) expect(result.hoursLeft).toBeGreaterThan(0);
+  });
+
+  it('un solo clic en un enlace de reserva la anula', () => {
+    const result = refundEligibility({ unlock_status: 'pagado', paid_at: hoursAgo(1) }, 1);
+    expect(result).toEqual({ eligible: false, reason: 'ya-usado' });
+  });
+
+  it('fuera de las 48 h no se devuelve', () => {
+    const result = refundEligibility({ unlock_status: 'pagado', paid_at: hoursAgo(49) }, 0);
+    expect(result).toEqual({ eligible: false, reason: 'fuera-de-plazo' });
+  });
+
+  it('justo en el límite todavía entra', () => {
+    const result = refundEligibility({ unlock_status: 'pagado', paid_at: hoursAgo(47.9) }, 0);
+    expect(result.eligible).toBe(true);
+  });
+
+  it('sin pagar no hay nada que devolver', () => {
+    expect(refundEligibility({ unlock_status: 'pendiente', paid_at: null }, 0)).toEqual({
+      eligible: false,
+      reason: 'no-pagado',
+    });
+    expect(refundEligibility({ unlock_status: 'exento', paid_at: null }, 0)).toEqual({
+      eligible: false,
+      reason: 'no-pagado',
+    });
+  });
+
+  it('no se devuelve dos veces', () => {
+    expect(refundEligibility({ unlock_status: 'reembolsado', paid_at: hoursAgo(1) }, 0)).toEqual({
+      eligible: false,
+      reason: 'ya-devuelto',
+    });
+  });
+
+  it('una fecha de pago corrupta no abre la puerta', () => {
+    expect(refundEligibility({ unlock_status: 'pagado', paid_at: 'no es una fecha' }, 0).eligible).toBe(false);
+  });
+
+  it('tras devolver, el plan vuelve a estar bloqueado', () => {
+    expect(isUnlocked({ unlock_fee: 38, unlock_status: 'reembolsado' })).toBe(false);
   });
 });

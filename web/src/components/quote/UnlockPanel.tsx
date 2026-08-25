@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { pricing } from '@/config/site';
 import { eur } from '@/lib/utils';
 
 type ManualDetails = { bizum?: string; iban?: string; holder?: string };
@@ -174,6 +175,14 @@ export function UnlockPanel({
             <p className="mt-3 text-sm leading-relaxed text-ink-500">
               Pago único de {eur(amount)} para {travelers} {travelers === 1 ? 'viajero' : 'viajeros'}. No es una
               suscripción y no se renueva. El viaje lo pagas después, directamente a cada proveedor.
+            </p>
+            <p className="mt-3 flex items-start gap-2 rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm leading-relaxed text-brand-900">
+              <span aria-hidden>↩️</span>
+              <span>
+                <strong className="font-semibold">Y si al abrirlo no te convence, te lo devolvemos.</strong> Tienes{' '}
+                {pricing.refund.hours} h para pedirlo, sin preguntas, mientras no hayas abierto ningún enlace de
+                reserva.
+              </span>
             </p>
           </div>
         )}

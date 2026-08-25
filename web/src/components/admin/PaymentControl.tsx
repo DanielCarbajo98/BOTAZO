@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { exemptQuoteAction, markPaidAction } from '@/app/admin/actions';
+import { exemptQuoteAction, markPaidAction, refundAction } from '@/app/admin/actions';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
@@ -31,9 +31,23 @@ export function PaymentControl({ quote }: { quote: QuoteRow }) {
     );
   }
 
+  if (quote.unlock_status === 'reembolsado') {
+    return (
+      <div className="space-y-2 text-sm">
+        <Badge tone="coral">Devuelto · {eur(quote.unlock_fee)}</Badge>
+        {quote.refunded_at ? <p className="text-ink-500">{formatDateTime(quote.refunded_at)}</p> : null}
+        {quote.refund_reason ? <p className="text-ink-700">«{quote.refund_reason}»</p> : null}
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-amber-900">
+          Acuérdate de ingresarle {eur(quote.unlock_fee)} por la misma vía por la que pagó. El plan ya se ha vuelto
+          a bloquear solo.
+        </p>
+      </div>
+    );
+  }
+
   if (quote.unlock_status !== 'pendiente') {
     return (
-      <div className="space-y-1.5 text-sm">
+      <div className="space-y-2 text-sm">
         <Badge tone="success">
           {quote.unlock_status === 'pagado' ? `Pagado · ${eur(quote.unlock_fee)}` : 'Abierto sin coste'}
         </Badge>
@@ -43,6 +57,30 @@ export function PaymentControl({ quote }: { quote: QuoteRow }) {
             {quote.payment_method}
             {quote.payment_ref ? ` · ${quote.payment_ref}` : ''}
           </p>
+        ) : null}
+        {quote.unlock_status === 'pagado' ? (
+          <>
+            <Input
+              className="h-10 text-sm"
+              placeholder="Motivo de la devolución (opcional)"
+              aria-label="Motivo de la devolución"
+              value={reference}
+              onChange={(event) => setReference(event.target.value)}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                if (window.confirm('Se le devolverá el importe y el plan volverá a bloquearse. ¿Seguro?')) {
+                  run(() => refundAction(quote.id, reference));
+                }
+              }}
+            >
+              Devolver el importe
+            </Button>
+            {error ? <p className="text-coral-600">{error}</p> : null}
+          </>
         ) : null}
       </div>
     );

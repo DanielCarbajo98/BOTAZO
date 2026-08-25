@@ -9,7 +9,8 @@ import { QuoteView } from '@/components/quote/QuoteView';
 import { site } from '@/config/site';
 import { isAdvisor, quoteNoun } from '@/config/mode';
 import { UnlockPanel } from '@/components/quote/UnlockPanel';
-import { isUnlocked, optionSaving, redactOption } from '@/lib/quote';
+import { isUnlocked, optionSaving, redactOption, refundEligibility } from '@/lib/quote';
+import { RefundRequest } from '@/components/quote/RefundRequest';
 import { isSessionPaid, paymentMode } from '@/lib/payments';
 import { repo, REQUEST_STATUSES, STATUS_META, type RequestStatus } from '@/lib/repository';
 import { eur, formatDateTime } from '@/lib/utils';
@@ -49,6 +50,7 @@ export default async function SolicitudPage({
   const options = visible ? visible.options.map((option) => redactOption(option, unlocked)) : [];
   // El ahorro ya lleva descontados nuestros honorarios: es lo que gana de verdad.
   const bestSaving = options.reduce((best, option) => Math.max(best, optionSaving(option)), 0);
+  const refund = visible ? refundEligibility(visible.quote, repo().countClicks(request.id)) : null;
   const status = REQUEST_STATUSES.includes(request.status) ? request.status : 'nueva';
   const currentIndex = TIMELINE.indexOf(status);
   const isNew = nuevo === '1';
@@ -115,7 +117,10 @@ export default async function SolicitudPage({
         </ol>
 
         {visible ? (
-          <div className="space-y-8">
+          // El identificador del plan ya lo maneja el propio navegador del
+          // cliente al llamar a la API; publicarlo aquí no añade exposición y
+          // permite comprobar el flujo de pago de punta a punta.
+          <div className="space-y-8" data-quote-id={visible.quote.id}>
             {pago === 'cancelado' && !unlocked ? (
               <p className="rounded-card border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-900">
                 Has salido del pago sin completarlo. No se te ha cobrado nada y tu plan sigue aquí cuando quieras.
@@ -129,6 +134,13 @@ export default async function SolicitudPage({
               unlocked={unlocked}
               requestId={request.id}
             />
+
+            {visible.quote.unlock_status === 'reembolsado' ? (
+              <p className="rounded-card border border-ink-200 bg-white px-5 py-4 text-sm leading-relaxed text-ink-600">
+                Te hemos devuelto el importe y el plan ha vuelto a bloquearse. Si cambias de opinión, escríbenos y lo
+                reabrimos sin volver a cobrarte.
+              </p>
+            ) : null}
 
             {unlocked ? (
               <QuoteActions
@@ -147,6 +159,16 @@ export default async function SolicitudPage({
                 bestSaving={bestSaving}
               />
             )}
+
+            {unlocked && refund?.eligible ? (
+              <RefundRequest
+                reference={request.reference}
+                token={token}
+                quoteId={visible.quote.id}
+                amount={visible.quote.unlock_fee}
+                hoursLeft={refund.hoursLeft}
+              />
+            ) : null}
           </div>
         ) : (
           <section className="rounded-card border border-ink-100 bg-white p-6 md:p-8">

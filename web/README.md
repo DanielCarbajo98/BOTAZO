@@ -98,6 +98,19 @@ verifica siempre —con ventana de 5 minutos contra reenvíos— y `markQuotePai
 idempotente, porque Stripe reintenta. Al volver de la pasarela también se
 confirma la sesión contra Stripe: nunca nos fiamos del `?pago=ok` de la URL.
 
+### Devolución sin preguntas
+
+48 h desde el pago para pedir la devolución íntegra, sin justificarse. Se anula
+si el cliente **ya ha pulsado algún enlace de reserva**: abrir un enlace es usar
+el trabajo, y queda registrado.
+
+Los dos criterios son objetivos y comprobables, que es lo que hace que la
+política se sostenga sin discusiones. Al devolver, **el plan vuelve a
+bloquearse**: es la contrapartida honesta de recuperar el dinero.
+
+El cliente la pide con un clic y el plan se cierra al instante; el ingreso lo
+haces tú y el panel te lo recuerda con el importe.
+
 ## Enlaces con seguimiento
 
 Los enlaces de reserva no se entregan en crudo: pasan por `/ir/[token]`, que

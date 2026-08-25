@@ -71,6 +71,25 @@ export default function CondicionesPage() {
         éxito. Si no se consigue ningún ahorro, este seguimiento no tiene coste alguno.
       </p>
 
+      {isAdvisor ? (
+        <>
+          <h3>3.4. Devolución sin preguntas</h3>
+          <p>
+            Puedes solicitar la devolución íntegra de los honorarios durante las {pricing.refund.hours} horas
+            siguientes al pago, sin necesidad de justificar el motivo, siempre que{' '}
+            <strong>no hayas accedido todavía a ninguno de los enlaces de reserva</strong> incluidos en la propuesta.
+            El acceso a esos enlaces queda registrado y constituye la prueba de que el servicio ya ha sido
+            utilizado.
+          </p>
+          <p>
+            Al tramitarse la devolución, la propuesta vuelve a mostrarse en su versión sin detalles, de forma que no
+            se conserva el resultado del trabajo cuyo importe se reintegra. El abono se realiza por el mismo medio
+            de pago empleado. Esta garantía es adicional a los derechos que la normativa de consumo te reconoce y
+            no los limita.
+          </p>
+        </>
+      ) : null}
+
       <h2>4. Garantía de ahorro</h2>
       <p>
         Si dentro del plazo de validez del presupuesto acreditas mediante captura o enlace un precio total igual o

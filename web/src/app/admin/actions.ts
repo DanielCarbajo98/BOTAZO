@@ -93,6 +93,18 @@ export async function exemptQuoteAction(quoteId: string): Promise<ActionState> {
   return { ok: true };
 }
 
+/** Devolución hecha desde el panel (por teléfono, por WhatsApp…). */
+export async function refundAction(quoteId: string, reason: string): Promise<ActionState> {
+  const actor = await requireActor();
+  const quote = repo().getQuote(quoteId);
+  if (!quote) return { error: 'Plan no encontrado.' };
+  if (quote.unlock_status !== 'pagado') return { error: 'Este plan no está pagado.' };
+
+  repo().refundQuote(quoteId, { reason: reason.slice(0, 500) || undefined, actor });
+  revalidatePath(`/admin/solicitudes/${quote.request_id}`);
+  return { ok: true };
+}
+
 export async function saveQuoteAction(
   requestId: string,
   quoteId: string | null,

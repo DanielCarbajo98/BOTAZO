@@ -154,6 +154,13 @@ const MIGRATIONS: { name: string; sql: string }[] = [
       CREATE INDEX idx_clicks_request ON link_clicks(request_id, created_at DESC);
     `,
   },
+  {
+    name: '003_devolucion',
+    sql: `
+      ALTER TABLE quotes ADD COLUMN refunded_at TEXT;
+      ALTER TABLE quotes ADD COLUMN refund_reason TEXT;
+    `,
+  },
 ];
 
 function migrate(db: Database.Database): void {

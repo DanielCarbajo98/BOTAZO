@@ -61,3 +61,19 @@ async function sendWebhook(text: string, request: TravelRequest): Promise<void> 
     console.warn('[notify] Webhook falló:', error);
   }
 }
+
+/**
+ * Aviso de devolución. Es urgente de verdad: hay dinero que devolver y el
+ * cliente ya no ve su plan.
+ */
+export async function notifyRefund(request: TravelRequest, amount: number, reason: string): Promise<void> {
+  const text = [
+    `↩️ DEVOLUCIÓN ${request.reference}`,
+    `${request.contact_name} · ${request.destination_summary}`,
+    `Hay que devolverle ${eur(amount)}`,
+    reason ? `Motivo: ${reason}` : 'Sin motivo indicado',
+  ].join('\n');
+
+  console.info(`[${site.name}] ${text.replace(/\n/g, ' | ')}`);
+  await Promise.allSettled([sendTelegram(text), sendWebhook(text, request)]);
+}

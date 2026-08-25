@@ -51,10 +51,12 @@ export type QuoteRow = {
   response_note: string | null;
   /** Lo que cuesta desbloquear el plan. 0 = sin muro de pago. */
   unlock_fee: number;
-  unlock_status: 'pendiente' | 'pagado' | 'exento';
+  unlock_status: 'pendiente' | 'pagado' | 'exento' | 'reembolsado';
   paid_at: string | null;
   payment_ref: string | null;
   payment_method: string | null;
+  refunded_at: string | null;
+  refund_reason: string | null;
 };
 
 export type ClickRow = {
@@ -390,6 +392,31 @@ export class Repository {
     this.addEvent(quote.request_id, {
       type: 'pago',
       message: `Plan desbloqueado · ${input.method}${input.reference ? ` · ${input.reference}` : ''}`,
+      actor: input.actor ?? 'cliente',
+    });
+    return this.getQuote(quoteId);
+  }
+
+  /**
+   * Devuelve el dinero y vuelve a bloquear el plan.
+   *
+   * Lo segundo es la contrapartida honesta de lo primero: si te devuelven lo
+   * que pagaste, no te quedas además con el trabajo.
+   */
+  refundQuote(quoteId: string, input: { reason?: string; actor?: string }): QuoteRow | null {
+    const quote = this.getQuote(quoteId);
+    if (!quote || quote.unlock_status !== 'pagado') return null;
+
+    const timestamp = now();
+    this.db
+      .prepare(
+        `UPDATE quotes SET unlock_status = 'reembolsado', refunded_at = ?, refund_reason = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+      .run(timestamp, input.reason ?? null, timestamp, quoteId);
+    this.addEvent(quote.request_id, {
+      type: 'devolucion',
+      message: `Devolución solicitada${input.reason ? `: ${input.reason}` : ''}. El plan vuelve a estar bloqueado.`,
       actor: input.actor ?? 'cliente',
     });
     return this.getQuote(quoteId);

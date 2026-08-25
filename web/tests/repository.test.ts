@@ -236,3 +236,38 @@ describe('clics en enlaces', () => {
     expect(repo.countClicks(request.id)).toBe(0);
   });
 });
+
+describe('devoluciones', () => {
+  const paidQuote = () => {
+    const { request } = create();
+    const quote = repo.createQuote(request.id, { title: 'Roma', unlockFee: 38 });
+    repo.sendQuote(quote.id);
+    repo.markQuotePaid(quote.id, { method: 'Bizum' });
+    return { request, quote };
+  };
+
+  it('devolver vuelve a bloquear el plan y deja constancia', () => {
+    const { request, quote } = paidQuote();
+    repo.refundQuote(quote.id, { reason: 'Prefiero otras fechas' });
+
+    const updated = repo.getQuote(quote.id)!;
+    expect(updated.unlock_status).toBe('reembolsado');
+    expect(updated.refunded_at).toBeTruthy();
+    expect(updated.refund_reason).toBe('Prefiero otras fechas');
+    expect(repo.listEvents(request.id).some((e) => e.type === 'devolucion')).toBe(true);
+  });
+
+  it('no se puede devolver algo que no está pagado', () => {
+    const { request } = create();
+    const quote = repo.createQuote(request.id, { title: 'Roma', unlockFee: 38 });
+    repo.sendQuote(quote.id);
+    expect(repo.refundQuote(quote.id, {})).toBeNull();
+    expect(repo.getQuote(quote.id)!.unlock_status).toBe('pendiente');
+  });
+
+  it('no se devuelve dos veces', () => {
+    const { quote } = paidQuote();
+    repo.refundQuote(quote.id, {});
+    expect(repo.refundQuote(quote.id, {})).toBeNull();
+  });
+});

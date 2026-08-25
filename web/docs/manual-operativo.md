@@ -96,6 +96,12 @@ En **modo asesor** el orden es otro:
 El panel te dice qué enlaces ha pulsado y cuándo. Si pagó hace dos días y no ha
 pulsado ninguno, escríbele: se ha atascado.
 
+**Si pide la devolución**, el plan se le vuelve a bloquear solo y el panel te
+avisa del importe a ingresar. Hazlo el mismo día y por la misma vía: es una
+promesa pública y se cumple sin rechistar. Solo se puede pedir dentro de 48 h y
+si no ha abierto ningún enlace, así que si te llega es que efectivamente no le
+ha servido.
+
 ## 6 · Antes del viaje
 
 | Cuándo | Qué |

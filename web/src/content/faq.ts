@@ -37,6 +37,13 @@ export const faqs: FaqItem[] = [
   },
   {
     group: 'Precio',
+    question: '¿Y si pago y luego no me convence?',
+    answer: isAdvisor
+      ? 'Te devolvemos el dinero, sin preguntas y sin que tengas que justificarte. Tienes 48 horas desde el pago, con una única condición: que no hayas abierto todavía ninguno de los enlaces de reserva. En cuanto abres uno, el trabajo ya te ha servido. Al devolverte el importe el plan vuelve a bloquearse, que es lo justo por ambas partes.'
+      : 'Nos dices qué cambiarías y preparamos una segunda ronda sin coste. Si aun así no encaja, no has pagado nada y ahí queda la cosa.',
+  },
+  {
+    group: 'Precio',
     question: '¿Por qué hay un mínimo por reserva?',
     answer:
       'Porque buscar para una persona cuesta prácticamente lo mismo que buscar para cuatro: los mismos aeropuertos, el mismo calendario, las mismas comparaciones. El mínimo es lo que hace que podamos seguir dedicándole horas reales a cada presupuesto en lugar de despacharlo en diez minutos.',

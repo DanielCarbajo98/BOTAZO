@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { pricing } from '@/config/site';
 import type { QuoteOptionRow, QuoteRow } from '@/lib/repository';
 
 /* ------------------------------------------------------------------ *
@@ -250,6 +251,32 @@ export function redactOption(option: QuoteOptionRow, unlocked: boolean): QuoteOp
 
 /** ¿Puede el cliente ver los detalles completos de este plan? */
 export function isUnlocked(quote: Pick<QuoteRow, 'unlock_fee' | 'unlock_status'>): boolean {
+  // Un plan devuelto se cierra otra vez, aunque en su día estuviera pagado.
+  if (quote.unlock_status === 'reembolsado') return false;
   if (quote.unlock_status === 'pagado' || quote.unlock_status === 'exento') return true;
   return quote.unlock_fee <= 0;
+}
+
+export type RefundEligibility =
+  | { eligible: true; hoursLeft: number }
+  | { eligible: false; reason: 'no-pagado' | 'fuera-de-plazo' | 'ya-usado' | 'ya-devuelto' };
+
+/**
+ * Si toca devolver el dinero o no. Dos criterios, los dos comprobables:
+ * el plazo y si ha llegado a pulsar algún enlace de reserva.
+ */
+export function refundEligibility(
+  quote: Pick<QuoteRow, 'unlock_status' | 'paid_at'>,
+  clickCount: number,
+  nowMs = Date.now(),
+): RefundEligibility {
+  if (quote.unlock_status === 'reembolsado') return { eligible: false, reason: 'ya-devuelto' };
+  if (quote.unlock_status !== 'pagado' || !quote.paid_at) return { eligible: false, reason: 'no-pagado' };
+  if (pricing.refund.voidOnClick && clickCount > 0) return { eligible: false, reason: 'ya-usado' };
+
+  const elapsedHours = (nowMs - Date.parse(quote.paid_at)) / 3_600_000;
+  if (!Number.isFinite(elapsedHours) || elapsedHours > pricing.refund.hours) {
+    return { eligible: false, reason: 'fuera-de-plazo' };
+  }
+  return { eligible: true, hoursLeft: Math.max(0, Math.ceil(pricing.refund.hours - elapsedHours)) };
 }
